@@ -12,6 +12,7 @@
 #define LE_COMBINE_BANK_SHORT(bank, us) (uint32_t)(((((0x00000000 | bank) << 8) | ((us & 0xFF00) >> 8)) << 8) | (us & 0x00FF))
 #define LE_COMBINE_BANK_2BYTE(bank, b1, b2) (uint32_t)(((((0x00000000 | bank) << 8) | b2) << 8) | b1)
 #define LE_COMBINE_2BYTE(b1, b2) (uint16_t)(((0x0000 | b2) << 8) | b1)
+#define LE_COMBINE_3BYTE(b1, b2, b3) (uint32_t)(((((0x00000000 | b3) << 8) | b2) << 8) | b1)
 
 #define COP_VECTOR_65816 (uint32_t[]){ 0x0000FFE4, 0x0000FFE5 }
 #define BRK_VECTOR_65816 (uint32_t[]){ 0x0000FFE6, 0x0000FFE7 }
@@ -415,7 +416,7 @@ struct Ricoh_5A22
 
 	uint16_t stack_ptr;
 
-	uint8_t direct_page[2];
+	uint16_t direct_page;
 
 	uint8_t data_bank;
 

@@ -34,59 +34,115 @@ uint32_t addr_ABS(struct Ricoh_5A22 *cpu, uint8_t memory[])
 	uint32_t oper = LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr);
 	uint32_t addr = LE_COMBINE_BANK_2BYTE(cpu->data_bank, memory[oper], memory[oper + 1]);
 
+	cpu->program_ctr += 2;
+
 	printf("%02x %02x %02x %06x\n", cpu->data_bank, memory[oper], memory[oper + 1], addr);
 
 	return addr;
 }
 
-uint32_t addr_ABS_IIX(struct Ricoh_5A22 *cpu)
+uint32_t addr_ABS_IIX(struct Ricoh_5A22 *cpu, uint8_t memory[])
 {
-	return 0x00000000;
+	uint32_t oper = LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr);
+	uint32_t addr = LE_COMBINE_BANK_2BYTE(cpu->data_bank, memory[oper], memory[oper + 1]) + cpu->register_X;
+
+	cpu->program_ctr += 2;
+
+	return addr;
 }
 
-uint32_t addr_ABS_IIY(struct Ricoh_5A22 *cpu)
+uint32_t addr_ABS_IIY(struct Ricoh_5A22 *cpu, uint8_t memory[])
 {
-	return 0x00000000;
+	uint32_t oper = LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr);
+	uint32_t addr = LE_COMBINE_BANK_2BYTE(cpu->data_bank, memory[oper], memory[oper + 1]) + cpu->register_Y;
+
+	cpu->program_ctr += 2;
+
+	return addr;
 }
 
-uint32_t addr_ABS_L(struct Ricoh_5A22 *cpu)
+uint32_t addr_ABS_L(struct Ricoh_5A22 *cpu, uint8_t memory[])
 {
-	return 0x00000000;
+	uint32_t oper = LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr);
+	uint32_t addr = LE_COMBINE_3BYTE(memory[oper], memory[oper + 1], memory[oper + 2]);
+
+	cpu->program_ctr += 3;
+
+	return addr;
 }
 
-uint32_t addr_ABS_LIX(struct Ricoh_5A22 *cpu)
+uint32_t addr_ABS_LIX(struct Ricoh_5A22 *cpu, uint8_t memory[])
 {
-	return 0x00000000;
+	uint32_t oper = LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr);
+	uint32_t addr = LE_COMBINE_3BYTE(memory[oper], memory[oper + 1], memory[oper + 2]) + cpu->register_X;
+
+	cpu->program_ctr += 3;
+
+	return addr;
 }
 
-uint32_t addr_ABS_I(struct Ricoh_5A22 *cpu)
+uint32_t addr_ABS_I(struct Ricoh_5A22 *cpu, uint8_t memory[])
 {
-	return 0x00000000;
+	uint32_t oper = LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr);
+	uint32_t addr = LE_COMBINE_2BYTE(memory[oper], memory[oper + 1]);
+	uint32_t addr_indirect = LE_COMBINE_2BYTE(memory[addr], memory[addr + 1]);
+	uint32_t addr_effective = LE_COMBINE_BANK_SHORT(cpu->program_bank, addr_indirect);
+
+	cpu->program_ctr += 2;
+
+	return addr_effective;
 }
 
-uint32_t addr_ABS_II(struct Ricoh_5A22 *cpu)
+uint32_t addr_ABS_II(struct Ricoh_5A22 *cpu, uint8_t memory[])
 {
-	return 0x00000000;
+	uint32_t oper = LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr);
+	uint32_t addr = LE_COMBINE_2BYTE(memory[oper], memory[oper + 1]) + cpu->register_X;
+	uint32_t addr_indirect = LE_COMBINE_2BYTE(memory[addr], memory[addr + 1]);
+	uint32_t addr_effective = LE_COMBINE_BANK_SHORT(cpu->program_bank, addr_indirect);
+
+	cpu->program_ctr += 2;
+
+	return addr_effective;
 }
 
-uint32_t addr_DIR(struct Ricoh_5A22 *cpu)
+uint32_t addr_DIR(struct Ricoh_5A22 *cpu, uint8_t memory[])
 {
-	return 0x00000000;
+	uint32_t oper = LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr);
+	uint32_t addr = cpu->direct_page + memory[oper];
+
+	cpu->program_ctr += 1;
+
+	return addr;
 }
 
-uint32_t addr_STK_R(struct Ricoh_5A22 *cpu)
+uint32_t addr_STK_R(struct Ricoh_5A22 *cpu, uint8_t memory[])
 {
-	return 0x00000000;
+	uint32_t oper = LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr);
+	uint32_t addr = cpu->stack_ptr + memory[oper];
+
+	cpu->program_ctr += 1;
+
+	return addr;
 }
 
-uint32_t addr_DIR_IX(struct Ricoh_5A22 *cpu)
+uint32_t addr_DIR_IX(struct Ricoh_5A22 *cpu, uint8_t memory[])
 {
-	return 0x00000000;
+	uint32_t oper = LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr);
+	uint32_t addr = cpu->direct_page + memory[oper] + cpu->register_X;
+
+	cpu->program_ctr += 1;
+
+	return addr;
 }
 
-uint32_t addr_DIR_IY(struct Ricoh_5A22 *cpu)
+uint32_t addr_DIR_IY(struct Ricoh_5A22 *cpu, uint8_t memory[])
 {
-	return 0x00000000;
+	uint32_t oper = LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr);
+	uint32_t addr = cpu->direct_page + memory[oper] + cpu->register_Y;
+
+	cpu->program_ctr += 1;
+
+	return addr;
 }
 
 uint32_t addr_DIR_I(struct Ricoh_5A22 *cpu)
@@ -514,6 +570,7 @@ void init_ricoh_5a22(struct Ricoh_5A22 *cpu, uint8_t memory[])
 {
 	cpu->data_bank = 0x00;
 	cpu->program_bank = 0x00;
+	cpu->direct_page = 0x0000;
 
 	cpu->program_ctr = LE_COMBINE_2BYTE(memory[RESET_VECTOR_6502[0]], memory[RESET_VECTOR_6502[1]]);
 

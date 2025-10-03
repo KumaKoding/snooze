@@ -6,7 +6,7 @@
 
 int main()
 {
-	uint8_t *memory = malloc(sizeof(uint16_t) * 0xFFFFFF);
+	uint8_t *memory = malloc(sizeof(uint8_t) * 0xFFFFFF);
 
 	memory[RESET_VECTOR_6502[0]] = 0x00;
 	memory[RESET_VECTOR_6502[1]] = 0x00;
