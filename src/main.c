@@ -29,11 +29,14 @@ int main()
 	// printf("%08x %u\n", cpu.register_A, cpu.register_A);
 	
 	struct memory memory;
-	init_memory(&memory, ExHiROM_MARKER);
+	init_memory(&memory, LoROM_MARKER);
 
-	printf("%d\n", HiROM_ROM_SIZE);
+	printf("%d\n",LoROM_ROM_SIZE);
+	printf("%d\n",LoROM_SRAM_SUBSIZE_1);
 
-	memory_indexer(&memory, 0x803000);
+	memory_indexer(&memory, 0x7FFFFF);
+	memory_indexer(&memory, 0x7D7FFF);
+	memory_indexer(&memory, 0xFE0000);
 
 	return 0;
 
