@@ -423,6 +423,7 @@ struct Ricoh_5A22
 	uint8_t program_bank;
 	uint16_t program_ctr;
 
+	uint8_t cpu_emulation6502;
 	uint8_t cpu_status;
 };
 

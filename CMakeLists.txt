@@ -6,8 +6,8 @@ project(snooze
 add_compile_options(-fsanitize=undefined -Wall -Werror -Iinclude)
 add_link_options(-fsanitize=undefined)
 
-set(SOURCES src/main.c src/Ricoh5A22.c)
-set(HEADERS include/Ricoh5A22.h)
+set(SOURCES src/main.c src/Ricoh5A22.c src/memory.c)
+set(HEADERS include/Ricoh5A22.h include/memory.h)
 
 include_directories(include)
 
