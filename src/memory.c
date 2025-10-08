@@ -79,7 +79,11 @@ uint32_t WRAM_indexer(uint32_t index)
 	uint16_t low_bytes = index & 0x0000FFFF;
 
 	uint32_t bank_width = (WRAM_BYTES[1] + 1) - WRAM_BYTES[0];
-	new_index = ((bank_byte - WRAM_BANKS[0]) * bank_width) + ((low_bytes - WRAM_BYTES[0]) % bank_width);
+
+	uint8_t bank_offset = bank_byte - WRAM_BANKS[0];
+	uint16_t byte_offset = low_bytes - WRAM_BYTES[0];
+
+	new_index = (bank_offset * bank_width) + (byte_offset % bank_width);
 
 	return new_index;
 }
@@ -91,20 +95,12 @@ uint32_t REG_indexer(uint32_t index)
 	uint16_t low_bytes = index & 0x0000FFFF;
 
 	uint32_t bank_width = (REG_BYTES[1] + 1) - REG_BYTES[0];
-	new_index = ((bank_byte - REG_BANKS[0]) * bank_width) + ((low_bytes - REG_BYTES[0]) % bank_width);
 
-	return new_index;
-}
+	uint8_t bank_offset = bank_byte - REG_BANKS[0];
+	uint16_t byte_offset = low_bytes - REG_BYTES[0];
 
-uint32_t REG_mirror_indexer(uint32_t index)
-{
-	uint32_t new_index = 0;	
-	uint8_t bank_byte = (index & 0x00FF0000) >> 16;
-	uint16_t low_bytes = index & 0x0000FFFF;
-
-	uint32_t bank_width = (REG_MIRROR_BYTES[1] + 1) - REG_MIRROR_BYTES[0];
-	new_index = ((bank_byte - REG_MIRROR_BANKS[0]) * bank_width) + ((low_bytes - REG_MIRROR_BYTES[0]) % bank_width);
-
+	new_index = (bank_offset * bank_width) + (byte_offset % bank_width);
+	
 	return new_index;
 }
 
@@ -115,7 +111,11 @@ uint32_t LoROM_ROM_indexer(uint32_t index)
 	uint16_t low_bytes = index & 0x0000FFFF;
 
 	uint32_t bank_width = (LoROM_ROM_BYTES[1] + 1) - LoROM_ROM_BYTES[0];
-	new_index = ((bank_byte - LoROM_ROM_BANKS[0]) * bank_width) + ((low_bytes - LoROM_ROM_BYTES[0]) % bank_width);
+
+	uint8_t bank_offset = bank_byte - LoROM_ROM_BANKS[0];
+	uint16_t byte_offset = low_bytes - LoROM_ROM_BYTES[0];
+
+	new_index = (bank_offset * bank_width) + (byte_offset % bank_width);
 
 	return new_index;
 }
@@ -127,7 +127,11 @@ uint32_t LoROM_ROM_mirror_indexer(uint32_t index)
 	uint16_t low_bytes = (index & 0x0000FFFF) + LoROM_ROM_BYTES[0];
 
 	uint32_t bank_width = (LoROM_ROM_BYTES[1] + 1) - LoROM_ROM_BYTES[0];
-	new_index = ((bank_byte - LoROM_ROM_BANKS[0]) * bank_width) + ((low_bytes - LoROM_ROM_BYTES[0]) % bank_width);
+
+	uint8_t bank_offset = bank_byte - LoROM_ROM_BANKS[0];
+	uint16_t byte_offset = low_bytes - LoROM_ROM_BYTES[0];
+
+	new_index = (bank_offset * bank_width) + (byte_offset % bank_width);
 
 	return new_index;
 }
@@ -139,7 +143,11 @@ uint32_t LoROM_SRAM_indexer(uint32_t index)
 	uint16_t low_bytes = index & 0x0000FFFF;
 
 	uint32_t bank_width = (LoROM_SRAM_BYTES[1] + 1) - LoROM_SRAM_BYTES[0];
-	new_index = ((bank_byte - LoROM_SRAM_BANKS[0]) * bank_width) + ((low_bytes - LoROM_SRAM_BYTES[0]) % bank_width);
+
+	uint8_t bank_offset = bank_byte - LoROM_SRAM_BANKS[0];
+	uint16_t byte_offset = low_bytes - LoROM_SRAM_BYTES[0];
+
+	new_index = (bank_offset * bank_width) + (byte_offset % bank_width);
 
 	return new_index;
 }
@@ -152,71 +160,71 @@ uint32_t LoROM_SRAM_mirror_indexer(uint32_t index)
 
 	uint32_t bank_width = (LoROM_SRAM_BYTES[1] + 1) - LoROM_SRAM_BYTES[0];
 	uint32_t sram_nbanks = (LoROM_SRAM_BANKS[1] + 1) - LoROM_SRAM_BANKS[0];
-	bank_byte = 
-		LoROM_SRAM_BANKS[0] + 
-		((bank_byte - LoROM_SRAM_MIRROR_BANKS[0]) % sram_nbanks);
+	uint8_t bank_mirror_offset = bank_byte - LoROM_SRAM_MIRROR_BANKS[0];
 
-	new_index = 
-		((bank_byte - LoROM_SRAM_BANKS[0]) * bank_width) + 
-		((low_bytes - LoROM_SRAM_BYTES[0]) % bank_width);
+	bank_byte = LoROM_SRAM_BANKS[0] + (bank_mirror_offset % sram_nbanks);
+	uint8_t bank_offset = bank_byte - LoROM_SRAM_BANKS[0];
+	uint16_t byte_offset = low_bytes - LoROM_SRAM_BYTES[0];
+
+	new_index = (bank_offset * bank_width) + byte_offset;
 
 	return new_index;
 }
 
-uint8_t *memory_indexer(struct memory *memory, uint32_t index)
+uint8_t *memory_indexer(struct memory *memory, uint32_t addr)
 {
-	if(is_within_area(index, WRAM_LOWRAM_BANK, WRAM_LOWRAM_BYTES[0], WRAM_LOWRAM_BANK, WRAM_LOWRAM_BYTES[1]))
+	uint32_t cartridge_addr = addr;
+	uint8_t cartridge_byte = (uint8_t)((addr & 0x00FF0000) >> 16);
+
+	if(cartridge_byte < WRAM_BANKS[0])
 	{
-		printf("WRAM lowRAM: %u\n", WRAM_indexer(index));
+		cartridge_byte = cartridge_byte + 0x80;
+
+		cartridge_addr = addr & 0x0000FFFF;
+		cartridge_addr |= (0x00000000 | cartridge_byte) << 16;
 	}
-	else if(is_within_area(index, WRAM_LOWRAM_MIRROR_1_BANKS[0], WRAM_LOWRAM_BYTES[0], WRAM_LOWRAM_MIRROR_1_BANKS[1], WRAM_LOWRAM_BYTES[1]))
+
+	uint32_t mirror_addr = (addr & 0x0000FFFF);
+	uint8_t mirror_byte = (uint8_t)((addr & 0x00FF0000) >> 16) + 0x80;
+	mirror_addr |= ((0x00000000 | mirror_byte) << 16);
+
+	if(IN_WRAM(addr))
 	{
-		printf("WRAM lowRAM mirror 1: %u\n", WRAM_lowRAM_mirror_indexer(index));
+		printf("WRAM: %u\n", WRAM_indexer(addr));
 	}
-	else if(is_within_area(index, WRAM_LOWRAM_MIRROR_2_BANKS[0], WRAM_LOWRAM_BYTES[0], WRAM_LOWRAM_MIRROR_2_BANKS[1], WRAM_LOWRAM_BYTES[1]))
+	else if(IN_WRAM_LOWRAM_MIRROR(addr))
 	{
-		printf("WRAM lowRAM mirror 2: %u\n", WRAM_lowRAM_mirror_indexer(index));
+		printf("WRAM lowRAM mirror: %u\n", WRAM_lowRAM_mirror_indexer(addr));
 	}
-	else if(is_within_area(index, WRAM_BANKS[0], WRAM_BYTES[0], WRAM_BANKS[1], WRAM_BYTES[1]))
+	else if(IN_WRAM_LOWRAM_MIRROR(mirror_addr))
 	{
-		printf("WRAM: %u\n", WRAM_indexer(index));
+		printf("WRAM lowRAM mirror: %u\n", WRAM_lowRAM_mirror_indexer(mirror_addr));
 	}
-	else if(is_within_area(index, REG_BANKS[0], REG_BYTES[0], REG_BANKS[1], REG_BYTES[1]))
+	else if(IN_REG(addr))
 	{
-		printf("Registers: %u\n", REG_indexer(index));
+		printf("Registers: %u\n", REG_indexer(addr));
 	}
-	else if(is_within_area(index, REG_MIRROR_BANKS[0], REG_MIRROR_BYTES[0], REG_MIRROR_BANKS[1], REG_MIRROR_BYTES[1]))
+	else if(IN_REG(mirror_addr)) 
 	{
-		printf("Registers mirror: %u\n", REG_mirror_indexer(index));
+		printf("Registers: %u\n", REG_indexer(mirror_addr));
 	}
 	else if(memory->ROM_type_marker == LoROM_MARKER)
 	{
-		uint32_t converted_index = index;
-		uint8_t bank_byte = (uint8_t)((index & 0x00FF0000) >> 16);
-
-		if(bank_byte < WRAM_BANKS[0])
+		if(IN_LoROM_ROM(cartridge_addr))
 		{
-			bank_byte = bank_byte + 0x80;
-
-			converted_index = index & 0x0000FFFF;
-			converted_index |= (0x00000000 | bank_byte) << 16;
+			printf("LoROM: %u\n", LoROM_ROM_indexer(cartridge_addr));
 		}
-
-		if(IN_LoROM_ROM(converted_index))
+		else if(IN_LoROM_ROM_MIRROR(cartridge_addr))
 		{
-			printf("LoROM: %u\n", LoROM_ROM_indexer(converted_index));
-		}
-		else if(IN_LoROM_ROM_MIRROR(converted_index))
-		{
-			printf("LoROM mirror: %u\n", LoROM_ROM_mirror_indexer(converted_index));
+			printf("LoROM mirror: %u\n", LoROM_ROM_mirror_indexer(cartridge_addr));
 		}	
-		else if(IN_LoROM_SRAM(converted_index))
+		else if(IN_LoROM_SRAM(cartridge_addr))
 		{
-			printf("LoROM SRAM: %u\n", LoROM_SRAM_indexer(converted_index));
+			printf("LoROM SRAM: %u\n", LoROM_SRAM_indexer(cartridge_addr));
 		}
-		else if(IN_LoROM_SRAM_MIRROR(converted_index))
+		else if(IN_LoROM_SRAM_MIRROR(cartridge_addr))
 		{
-			printf("LoROM SRAM mirror: %u\n", LoROM_SRAM_mirror_indexer(converted_index));
+			printf("LoROM SRAM mirror: %u\n", LoROM_SRAM_mirror_indexer(cartridge_addr));
 		}
 		else 
 		{

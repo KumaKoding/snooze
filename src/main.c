@@ -86,6 +86,42 @@ int main()
 	memory_indexer(&memory, 0xFF7FFF);
 	printf("\n");
 
+	memory_indexer(&memory, 0x700000);
+	memory_indexer(&memory, 0x707FFF);
+	memory_indexer(&memory, 0x7D0000);
+	memory_indexer(&memory, 0x7D7FFF);
+	printf("\n");
+
+	memory_indexer(&memory, 0x000000);
+	memory_indexer(&memory, 0x001FFF);
+	memory_indexer(&memory, 0x3F0000);
+	memory_indexer(&memory, 0x3F1FFF);
+	printf("\n");
+
+	memory_indexer(&memory, 0x800000);
+	memory_indexer(&memory, 0x801FFF);
+	memory_indexer(&memory, 0xBF0000);
+	memory_indexer(&memory, 0xBF1FFF);
+	printf("\n");
+
+	memory_indexer(&memory, 0x002000);
+	memory_indexer(&memory, 0x005FFF);
+	memory_indexer(&memory, 0x3F2000);
+	memory_indexer(&memory, 0x3F5FFF);
+	printf("\n");
+
+	memory_indexer(&memory, 0x802000);
+	memory_indexer(&memory, 0x805FFF);
+	memory_indexer(&memory, 0xBF2000);
+	memory_indexer(&memory, 0xBF5FFF);
+	printf("\n");
+
+	memory_indexer(&memory, 0x7E0000);
+	memory_indexer(&memory, 0x7EFFFF);
+	memory_indexer(&memory, 0x7F0000);
+	memory_indexer(&memory, 0x7FFFFF);
+	printf("\n");
+
 	return 0;
 
 }
