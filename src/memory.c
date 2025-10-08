@@ -124,15 +124,15 @@ uint32_t LoROM_ROM_mirror_indexer(uint32_t index)
 {
 	uint32_t new_index = 0;	
 	uint8_t bank_byte = (index & 0x00FF0000) >> 16;
-	uint16_t low_bytes = index & 0x0000FFFF;
+	uint16_t low_bytes = (index & 0x0000FFFF) + LoROM_ROM_BYTES[0];
 
-	uint32_t bank_width = (LoROM_MIRROR_BYTES[1] + 1) - LoROM_MIRROR_BYTES[0];
-	new_index = ((bank_byte - LoROM_MIRROR_BANKS[0]) * bank_width) + ((low_bytes - LoROM_MIRROR_BYTES[0]) % bank_width);
+	uint32_t bank_width = (LoROM_ROM_BYTES[1] + 1) - LoROM_ROM_BYTES[0];
+	new_index = ((bank_byte - LoROM_ROM_BANKS[0]) * bank_width) + ((low_bytes - LoROM_ROM_BYTES[0]) % bank_width);
 
 	return new_index;
 }
 
-uint32_t LoROM_SRAM_s1_indexer(uint32_t index)
+uint32_t LoROM_SRAM_indexer(uint32_t index)
 {
 	uint32_t new_index = 0;	
 	uint8_t bank_byte = (index & 0x00FF0000) >> 16;
@@ -144,28 +144,21 @@ uint32_t LoROM_SRAM_s1_indexer(uint32_t index)
 	return new_index;
 }
 
-uint32_t LoROM_SRAM_s2_indexer(uint32_t index)
-{
-	uint32_t new_index = 0;	
-	uint8_t bank_byte = (index & 0x00FF0000) >> 16;
-	uint16_t low_bytes = index & 0x0000FFFF;
-
-	uint32_t bank_width = (LoROM_SRAM_BYTES[3] + 1) - LoROM_SRAM_BYTES[2];
-	new_index = ((bank_byte - LoROM_SRAM_BANKS[2]) * bank_width) + ((low_bytes - LoROM_SRAM_BYTES[2]) % bank_width);
-
-	return new_index + LoROM_SRAM_SUBSIZE_1;
-}
-
 uint32_t LoROM_SRAM_mirror_indexer(uint32_t index)
 {
 	uint32_t new_index = 0;	
 	uint8_t bank_byte = (index & 0x00FF0000) >> 16;
 	uint16_t low_bytes = index & 0x0000FFFF;
 
-	printf("%02x %04x %02x %04x\n", bank_byte, low_bytes, LoROM_SRAM_MIRROR_BANKS[0], LoROM_SRAM_MIRROR_BYTES[0]);
+	uint32_t bank_width = (LoROM_SRAM_BYTES[1] + 1) - LoROM_SRAM_BYTES[0];
+	uint32_t sram_nbanks = (LoROM_SRAM_BANKS[1] + 1) - LoROM_SRAM_BANKS[0];
+	bank_byte = 
+		LoROM_SRAM_BANKS[0] + 
+		((bank_byte - LoROM_SRAM_MIRROR_BANKS[0]) % sram_nbanks);
 
-	uint32_t bank_width = (LoROM_SRAM_MIRROR_BYTES[1] + 1) - LoROM_SRAM_MIRROR_BYTES[0];
-	new_index = ((bank_byte - LoROM_SRAM_MIRROR_BANKS[0]) * bank_width) + ((low_bytes - LoROM_SRAM_MIRROR_BYTES[0]) % bank_width);
+	new_index = 
+		((bank_byte - LoROM_SRAM_BANKS[0]) * bank_width) + 
+		((low_bytes - LoROM_SRAM_BYTES[0]) % bank_width);
 
 	return new_index;
 }
@@ -198,83 +191,36 @@ uint8_t *memory_indexer(struct memory *memory, uint32_t index)
 	}
 	else if(memory->ROM_type_marker == LoROM_MARKER)
 	{
-		if(is_within_area(index, LoROM_ROM_BANKS[0], LoROM_ROM_BYTES[0], LoROM_ROM_BANKS[1], LoROM_ROM_BYTES[1]))
+		uint32_t converted_index = index;
+		uint8_t bank_byte = (uint8_t)((index & 0x00FF0000) >> 16);
+
+		if(bank_byte < WRAM_BANKS[0])
 		{
-			printf("LoROM: %u\n", LoROM_ROM_indexer(index));
+			bank_byte = bank_byte + 0x80;
+
+			converted_index = index & 0x0000FFFF;
+			converted_index |= (0x00000000 | bank_byte) << 16;
 		}
-		else if(is_within_area(index, LoROM_MIRROR_BANKS[0], LoROM_MIRROR_BYTES[0], LoROM_MIRROR_BANKS[1], LoROM_MIRROR_BYTES[1]))
+
+		if(IN_LoROM_ROM(converted_index))
 		{
-			printf("LoROM mirror: %u\n", LoROM_ROM_mirror_indexer(index));
+			printf("LoROM: %u\n", LoROM_ROM_indexer(converted_index));
 		}
-		else if(is_within_area(index, LoROM_SRAM_BANKS[0], LoROM_SRAM_BYTES[0], LoROM_SRAM_BANKS[1], LoROM_SRAM_BYTES[1]))
+		else if(IN_LoROM_ROM_MIRROR(converted_index))
 		{
-			printf("LoROM SRAM 1: %u\n", LoROM_SRAM_s1_indexer(index));
+			printf("LoROM mirror: %u\n", LoROM_ROM_mirror_indexer(converted_index));
 		}	
-		else if(is_within_area(index, LoROM_SRAM_BANKS[2], LoROM_SRAM_BYTES[2], LoROM_SRAM_BANKS[3], LoROM_SRAM_BYTES[3]))
+		else if(IN_LoROM_SRAM(converted_index))
 		{
-			printf("LoROM SRAM 2: %u\n", LoROM_SRAM_s2_indexer(index));
+			printf("LoROM SRAM: %u\n", LoROM_SRAM_indexer(converted_index));
 		}
-		else if(is_within_area(index, LoROM_SRAM_MIRROR_BANKS[0], LoROM_SRAM_MIRROR_BYTES[0], LoROM_SRAM_MIRROR_BANKS[1], LoROM_SRAM_MIRROR_BYTES[1]))
+		else if(IN_LoROM_SRAM_MIRROR(converted_index))
 		{
-			printf("LoROM SRAM mirror: %u\n", LoROM_SRAM_mirror_indexer(index));
+			printf("LoROM SRAM mirror: %u\n", LoROM_SRAM_mirror_indexer(converted_index));
 		}
 		else 
 		{
 			printf("LoROM UNKNOWN\n");
-		}
-	}
-	else if(memory->ROM_type_marker == HiROM_MARKER)
-	{
-		if(is_within_area(index, HiROM_ROM_BANKS[0], HiROM_ROM_BYTES[0], HiROM_ROM_BANKS[1], HiROM_ROM_BYTES[1]))
-		{
-			printf("HiROM ROM\n");
-		}
-		else if(is_within_area(index, HiROM_MIRROR_1_BANKS[0], HiROM_MIRROR_BYTES[0], HiROM_MIRROR_1_BANKS[1], HiROM_MIRROR_BYTES[1]))
-		{
-			printf("HiROM mirror 1\n");
-		}	
-		else if(is_within_area(index, HiROM_MIRROR_2_BANKS[0], HiROM_MIRROR_BYTES[0], HiROM_MIRROR_2_BANKS[1], HiROM_MIRROR_BYTES[1]))
-		{
-			printf("HiROM mirror 2\n");
-		}	
-		else if(is_within_area(index, HiROM_SRAM_BANKS[0], HiROM_SRAM_BYTES[0], HiROM_SRAM_BANKS[1], HiROM_SRAM_BYTES[1]))
-		{
-			printf("HiROM SRAM\n");
-		}
-		else 
-		{
-			printf("HiROM UNKNOWN\n");
-		}
-	}
-	else if(memory->ROM_type_marker == ExHiROM_MARKER)
-	{
-		if(is_within_area(index, ExHiROM_ROM_BANKS[0], ExHiROM_ROM_BYTES[0], ExHiROM_ROM_BANKS[1], ExHiROM_ROM_BYTES[1]))
-		{
-			printf("ExHiROM ROM\n");
-		}
-		else if(is_within_area(index, ExHiROM_ROM_MIRROR_BANKS[0], ExHiROM_ROM_MIRROR_BYTES[0], ExHiROM_ROM_MIRROR_BANKS[1], ExHiROM_ROM_MIRROR_BYTES[1]))
-		{
-			printf("ExHiROM ROM mirror\n");
-		}	
-		else if(is_within_area(index, ExHiROM_ExROM_BANKS[0], ExHiROM_ExROM_BYTES[0], ExHiROM_ExROM_BANKS[1], ExHiROM_ExROM_BYTES[1]))
-		{
-			printf("ExHiROM ExROM subsection 1\n");
-		}
-		else if(is_within_area(index, ExHiROM_ExROM_BANKS[2], ExHiROM_ExROM_BYTES[2], ExHiROM_ExROM_BANKS[3], ExHiROM_ExROM_BYTES[3]))
-		{
-			printf("ExHiROM ExROM subsection 2\n");
-		}
-		else if(is_within_area(index, ExHiROM_ExROM_MIRROR_BANKS[0], ExHiROM_ExROM_MIRROR_BYTES[0], ExHiROM_ExROM_MIRROR_BANKS[1], ExHiROM_ExROM_MIRROR_BYTES[1]))
-		{
-			printf("ExHiROM ExROM mirror\n");
-		}
-		else if(is_within_area(index, ExHiROM_SRAM_BANKS[0], ExHiROM_SRAM_BYTES[0], ExHiROM_SRAM_BANKS[1], ExHiROM_SRAM_BYTES[1]))
-		{
-			printf("ExHiROM SRAM\n");
-		}
-		else 
-		{
-			printf("ExHiROM UNKNOWN\n");
 		}
 	}
 	else 

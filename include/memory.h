@@ -4,6 +4,13 @@
 #include <stdint.h>
 
 #define MEMORY_AREA(x_0, y_0, x_1, y_1) (((x_1 + 1) - x_0) * ((y_1 + 1) - y_0))
+#define WITHIN_REGION(i, bank_0, bytes_0, bank_1, bytes_1) \
+	((((i & 0x00FF0000) >> 16) >= bank_0) && \
+	(((i & 0x00FF0000) >> 16) <= bank_1) && \
+	((i & 0x0000FFFF) >= bytes_0) && \
+	((i & 0x0000FFFF) <= bytes_1))
+
+// GENERAL ADDRESSES
 
 #define WRAM_SIZE 128 * 1024
 #define WRAM_BANKS (uint8_t[]){ 0x7E, 0x7F }
@@ -15,29 +22,49 @@
 
 #define REG_BANKS (uint8_t[]){ 0x00, 0x3F }
 #define REG_BYTES (uint16_t[]){ 0x2000, 0x5FFF }
-#define REG_SIZE MEMORY_AREA(REG_BANKS[0], REG_BYTES[0], REG_BANKS[1], REG_BYTES[1])
-
 #define REG_MIRROR_BANKS (uint8_t[]){ 0x80, 0xBF }
 #define REG_MIRROR_BYTES (uint16_t[]){ 0x2000, 0x5FFF }
+#define REG_SIZE \
+	MEMORY_AREA(REG_BANKS[0], REG_BYTES[0], \
+				REG_BANKS[1], REG_BYTES[1])
+
+
+// LoROM ADDRESSES
 
 #define LoROM_MARKER 0x20
 
-#define LoROM_SRAM_BANKS (uint8_t[]){ 0x70, 0x7D, 0xFE, 0xFF }
-#define LoROM_SRAM_BYTES (uint16_t[]){ 0x0000, 0x7FFF, 0x0000, 0x7FFF }
-#define LoROM_SRAM_SUBSIZE_1 MEMORY_AREA(LoROM_SRAM_BANKS[0], LoROM_SRAM_BYTES[0], LoROM_SRAM_BANKS[1], LoROM_SRAM_BYTES[1])
-#define LoROM_SRAM_SUBSIZE_2 MEMORY_AREA(LoROM_SRAM_BANKS[2], LoROM_SRAM_BYTES[2], LoROM_SRAM_BANKS[3], LoROM_SRAM_BYTES[3])
-#define LoROM_SRAM_SIZE LoROM_SRAM_SUBSIZE_1 + LoROM_SRAM_SUBSIZE_2
-
-#define LoROM_SRAM_MIRROR_BYTES (uint16_t[]){ 0x0000, 0x7FFF }
-#define LoROM_SRAM_MIRROR_BANKS (uint8_t[]){ 0xF0, 0xFD }
-
-#define LoROM_MIRROR_BANKS (uint8_t[]){ 0x00, 0x7D }
-#define LoROM_MIRROR_BYTES (uint16_t[]){ 0x8000, 0xFFFF }
-#define LoROM_MIRROR_SIZE MEMORY_AREA(LoROM_MIRROR_BANKS[0], LoROM_MIRROR_BYTES[1], LoROM_MIRROR_BANKS[1], LoROM_MIRROR_BYTES[1])
+#define LoROM_SRAM_BANKS (uint8_t[]){ 0xF0, 0xFD }
+#define LoROM_SRAM_BYTES (uint16_t[]){ 0x0000, 0x7FFF }
+#define LoROM_SRAM_MIRROR_BANKS (uint8_t[]){ 0xFE, 0xFF }
+#define LoROM_SRAM_SIZE \
+	MEMORY_AREA(LoROM_SRAM_BANKS[0], LoROM_SRAM_BYTES[0], \
+			LoROM_SRAM_BANKS[1], LoROM_SRAM_BYTES[1])
 
 #define LoROM_ROM_BANKS (uint8_t[]){ 0x80, 0xFF }
 #define LoROM_ROM_BYTES (uint16_t[]){ 0x8000, 0xFFFF }
-#define LoROM_ROM_SIZE MEMORY_AREA(LoROM_ROM_BANKS[0], LoROM_ROM_BYTES[0], LoROM_ROM_BANKS[1], LoROM_ROM_BYTES[1])
+#define LoROM_ROM_MIRROR_BANKS (uint8_t[]){ 0xC0, 0xEF }
+#define LoROM_ROM_MIRROR_BYTES (uint16_t[]){ 0x0000, 0x7FFF }
+#define LoROM_ROM_SIZE \
+	MEMORY_AREA(LoROM_ROM_BANKS[0], LoROM_ROM_BYTES[0], \
+			LoROM_ROM_BANKS[1], LoROM_ROM_BYTES[1])
+
+#define IN_LoROM_ROM(i) \
+	WITHIN_REGION(i, LoROM_ROM_BANKS[0], LoROM_ROM_BYTES[0], \
+					 LoROM_ROM_BANKS[1], LoROM_ROM_BYTES[1])
+
+#define IN_LoROM_ROM_MIRROR(i) \
+	WITHIN_REGION(i, LoROM_ROM_MIRROR_BANKS[0], LoROM_ROM_MIRROR_BYTES[0], \
+					 LoROM_ROM_MIRROR_BANKS[1], LoROM_ROM_MIRROR_BYTES[1])
+
+#define IN_LoROM_SRAM(i) \
+	WITHIN_REGION(i, LoROM_SRAM_BANKS[0], LoROM_SRAM_BYTES[0], \
+					 LoROM_SRAM_BANKS[1], LoROM_SRAM_BYTES[1])
+
+#define IN_LoROM_SRAM_MIRROR(i) \
+	WITHIN_REGION(i, LoROM_SRAM_MIRROR_BANKS[0], LoROM_SRAM_BYTES[0], \
+					 LoROM_SRAM_MIRROR_BANKS[1], LoROM_SRAM_BYTES[1])
+
+// HiROM ADDRESSES
 
 #define HiROM_MARKER 0x21
 
@@ -54,6 +81,8 @@
 #define HiROM_ROM_BANKS (uint8_t[]){ 0xC0, 0xFF }
 #define HiROM_ROM_BYTES (uint16_t[]){ 0x0000, 0xFFFF }
 #define HiROM_ROM_SIZE MEMORY_AREA(HiROM_ROM_BANKS[0], HiROM_ROM_BYTES[0], HiROM_ROM_BANKS[1], HiROM_ROM_BYTES[1])
+
+// ExHiROM ADDRESSES
 
 #define ExHiROM_MARKER 0x25
 

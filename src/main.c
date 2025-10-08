@@ -31,12 +31,60 @@ int main()
 	struct memory memory;
 	init_memory(&memory, LoROM_MARKER);
 
-	printf("%d\n",LoROM_ROM_SIZE);
-	printf("%d\n",LoROM_SRAM_SUBSIZE_1);
+	memory_indexer(&memory, 0x808000);
+	memory_indexer(&memory, 0x80FFFF);
+	memory_indexer(&memory, 0xFF8000);
+	memory_indexer(&memory, 0xFFFFFF);
+	printf("\n");
 
-	memory_indexer(&memory, 0x7FFFFF);
-	memory_indexer(&memory, 0x7D7FFF);
+	memory_indexer(&memory, 0xC08000);
+	memory_indexer(&memory, 0xC0FFFF);
+	memory_indexer(&memory, 0xEFFFFF);
+	memory_indexer(&memory, 0xEFFFFF);
+	printf("\n");
+
+	memory_indexer(&memory, 0xC00000);
+	memory_indexer(&memory, 0xC07FFF);
+	memory_indexer(&memory, 0xEF0000);
+	memory_indexer(&memory, 0xEF7FFF);
+	printf("\n");
+
+	memory_indexer(&memory, 0x808000);
+	memory_indexer(&memory, 0x80FFFF);
+	memory_indexer(&memory, 0xFD8000);
+	memory_indexer(&memory, 0xFDFFFF);
+	printf("\n");
+
+	memory_indexer(&memory, 0x008000);
+	memory_indexer(&memory, 0x00FFFF);
+	memory_indexer(&memory, 0x7D8000);
+	memory_indexer(&memory, 0x7DFFFF);
+	printf("\n");
+
+	memory_indexer(&memory, 0x408000);
+	memory_indexer(&memory, 0x40FFFF);
+	memory_indexer(&memory, 0x6FFFFF);
+	memory_indexer(&memory, 0x6FFFFF);
+	printf("\n");
+
+
+	memory_indexer(&memory, 0x408000);
+	memory_indexer(&memory, 0x40FFFF);
+	memory_indexer(&memory, 0x6F8000);
+	memory_indexer(&memory, 0x6FFFFF);
+	printf("\n");
+
+	memory_indexer(&memory, 0xF00000);
+	memory_indexer(&memory, 0xF07FFF);
+	memory_indexer(&memory, 0xFD0000);
+	memory_indexer(&memory, 0xFD7FFF);
+	printf("\n");
+
 	memory_indexer(&memory, 0xFE0000);
+	memory_indexer(&memory, 0xFE7FFF);
+	memory_indexer(&memory, 0xFF0000);
+	memory_indexer(&memory, 0xFF7FFF);
+	printf("\n");
 
 	return 0;
 
