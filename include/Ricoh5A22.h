@@ -2,6 +2,7 @@
 #define RICOH_5A22_H
 
 #include <stdint.h>
+#include "memory.h"
 
 #define BUS_B_ACCESS_SPEED 3.58
 #define INTERNAL_ACCESS_SPEED 3.58
@@ -427,8 +428,8 @@ struct Ricoh_5A22
 	uint8_t cpu_status;
 };
 
-void init_ricoh_5a22(struct Ricoh_5A22 *cpu, uint8_t memory[]);
-void decode_execute(struct Ricoh_5A22 *cpu, uint8_t memory[]);
+void init_ricoh_5a22(struct Ricoh_5A22 *cpu, struct Memory *memory);
+void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory);
 
 #endif // RICOH_5A22_H
 

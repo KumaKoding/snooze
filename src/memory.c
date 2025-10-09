@@ -4,16 +4,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-uint8_t data_bus_read(struct memory *memory, uint32_t addr)
-{
-	return 0;
-}
-
-void init_memory(struct memory *memory, uint8_t ROM_type_marker)
+void init_memory(struct Memory *memory, uint8_t ROM_type_marker)
 {
 	memory->ROM_type_marker = ROM_type_marker;
 	memory->WRAM = malloc(WRAM_SIZE * sizeof(uint8_t));
-	memory->low_WRAM = malloc((WRAM_LOWRAM_BYTES[1] - WRAM_LOWRAM_BYTES[0]) * sizeof(uint8_t));
 	memory->REG = malloc(REG_SIZE * sizeof(uint8_t));
 
 	if(ROM_type_marker == LoROM_MARKER)
@@ -66,8 +60,7 @@ uint32_t WRAM_lowRAM_mirror_indexer(uint32_t index)
 	uint32_t new_index = 0;	
 	uint16_t low_bytes = index & 0x0000FFFF;
 
-	uint32_t bank_width = (WRAM_LOWRAM_BYTES[1] + 1) - WRAM_LOWRAM_BYTES[0];
-	new_index = (low_bytes - WRAM_BYTES[0]) % bank_width;
+	new_index = (low_bytes - WRAM_BYTES[0]);
 
 	return new_index;
 }
@@ -83,7 +76,7 @@ uint32_t WRAM_indexer(uint32_t index)
 	uint8_t bank_offset = bank_byte - WRAM_BANKS[0];
 	uint16_t byte_offset = low_bytes - WRAM_BYTES[0];
 
-	new_index = (bank_offset * bank_width) + (byte_offset % bank_width);
+	new_index = (bank_offset * bank_width) + byte_offset;
 
 	return new_index;
 }
@@ -99,7 +92,7 @@ uint32_t REG_indexer(uint32_t index)
 	uint8_t bank_offset = bank_byte - REG_BANKS[0];
 	uint16_t byte_offset = low_bytes - REG_BYTES[0];
 
-	new_index = (bank_offset * bank_width) + (byte_offset % bank_width);
+	new_index = (bank_offset * bank_width) + byte_offset;
 	
 	return new_index;
 }
@@ -115,7 +108,7 @@ uint32_t LoROM_ROM_indexer(uint32_t index)
 	uint8_t bank_offset = bank_byte - LoROM_ROM_BANKS[0];
 	uint16_t byte_offset = low_bytes - LoROM_ROM_BYTES[0];
 
-	new_index = (bank_offset * bank_width) + (byte_offset % bank_width);
+	new_index = (bank_offset * bank_width) + byte_offset;
 
 	return new_index;
 }
@@ -131,7 +124,7 @@ uint32_t LoROM_ROM_mirror_indexer(uint32_t index)
 	uint8_t bank_offset = bank_byte - LoROM_ROM_BANKS[0];
 	uint16_t byte_offset = low_bytes - LoROM_ROM_BYTES[0];
 
-	new_index = (bank_offset * bank_width) + (byte_offset % bank_width);
+	new_index = (bank_offset * bank_width) + byte_offset;
 
 	return new_index;
 }
@@ -147,7 +140,7 @@ uint32_t LoROM_SRAM_indexer(uint32_t index)
 	uint8_t bank_offset = bank_byte - LoROM_SRAM_BANKS[0];
 	uint16_t byte_offset = low_bytes - LoROM_SRAM_BYTES[0];
 
-	new_index = (bank_offset * bank_width) + (byte_offset % bank_width);
+	new_index = (bank_offset * bank_width) + byte_offset;
 
 	return new_index;
 }
@@ -171,7 +164,7 @@ uint32_t LoROM_SRAM_mirror_indexer(uint32_t index)
 	return new_index;
 }
 
-uint8_t *memory_indexer(struct memory *memory, uint32_t addr)
+uint8_t DB_read(struct Memory *memory, uint32_t addr)
 {
 	uint32_t cartridge_addr = addr;
 	uint8_t cartridge_byte = (uint8_t)((addr & 0x00FF0000) >> 16);
@@ -190,41 +183,41 @@ uint8_t *memory_indexer(struct memory *memory, uint32_t addr)
 
 	if(IN_WRAM(addr))
 	{
-		printf("WRAM: %u\n", WRAM_indexer(addr));
+		return memory->WRAM[WRAM_indexer(addr)];
 	}
 	else if(IN_WRAM_LOWRAM_MIRROR(addr))
 	{
-		printf("WRAM lowRAM mirror: %u\n", WRAM_lowRAM_mirror_indexer(addr));
+		return memory->WRAM[WRAM_lowRAM_mirror_indexer(addr)];
 	}
 	else if(IN_WRAM_LOWRAM_MIRROR(mirror_addr))
 	{
-		printf("WRAM lowRAM mirror: %u\n", WRAM_lowRAM_mirror_indexer(mirror_addr));
+		return memory->WRAM[WRAM_lowRAM_mirror_indexer(mirror_addr)];
 	}
 	else if(IN_REG(addr))
 	{
-		printf("Registers: %u\n", REG_indexer(addr));
+		return memory->REG[REG_indexer(addr)];
 	}
 	else if(IN_REG(mirror_addr)) 
 	{
-		printf("Registers: %u\n", REG_indexer(mirror_addr));
+		return memory->REG[REG_indexer(mirror_addr)];
 	}
 	else if(memory->ROM_type_marker == LoROM_MARKER)
 	{
 		if(IN_LoROM_ROM(cartridge_addr))
 		{
-			printf("LoROM: %u\n", LoROM_ROM_indexer(cartridge_addr));
+			return memory->ROM.LoROM.ROM[LoROM_ROM_indexer(cartridge_addr)];
 		}
 		else if(IN_LoROM_ROM_MIRROR(cartridge_addr))
 		{
-			printf("LoROM mirror: %u\n", LoROM_ROM_mirror_indexer(cartridge_addr));
+			return memory->ROM.LoROM.ROM[LoROM_ROM_mirror_indexer(cartridge_addr)];
 		}	
 		else if(IN_LoROM_SRAM(cartridge_addr))
 		{
-			printf("LoROM SRAM: %u\n", LoROM_SRAM_indexer(cartridge_addr));
+			return memory->ROM.LoROM.SRAM[LoROM_SRAM_indexer(cartridge_addr)];
 		}
 		else if(IN_LoROM_SRAM_MIRROR(cartridge_addr))
 		{
-			printf("LoROM SRAM mirror: %u\n", LoROM_SRAM_mirror_indexer(cartridge_addr));
+			return memory->ROM.LoROM.SRAM[LoROM_SRAM_mirror_indexer(cartridge_addr)];
 		}
 		else 
 		{
@@ -236,6 +229,6 @@ uint8_t *memory_indexer(struct memory *memory, uint32_t addr)
 		printf("UNKNOWN\n");
 	}
 
-	return NULL;
+	return 0; // open bus
 }
 

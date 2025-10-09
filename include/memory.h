@@ -142,17 +142,16 @@ union ROM_t
 	struct ExHiROM ExHiROM;
 };
 
-struct memory
+struct Memory
 {
 	uint8_t *WRAM;
-	uint8_t *low_WRAM;
 	uint8_t *REG;
 
 	uint8_t ROM_type_marker;
 	union ROM_t ROM;
 };
 
-void init_memory(struct memory *memory, uint8_t ROM_type_marker);
-uint8_t *memory_indexer(struct memory *memory, uint32_t index);
+void init_memory(struct Memory *memory, uint8_t ROM_type_marker);
+uint8_t DB_read(struct Memory *memory, uint32_t index);
 
 #endif
