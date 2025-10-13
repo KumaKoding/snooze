@@ -27,6 +27,16 @@
 #define RESET_VECTOR_6502 (uint32_t[]){ 0x0000FFFC, 0x0000FFFD }
 #define IRQ_VECTOR_6502 (uint32_t[]){ 0x0000FFFE, 0x0000FFFF }
 
+#define BIT_SECL(bits, mask, cond) \
+	if(cond) \
+	{ \
+		bits |= mask; \
+	} \
+	else \
+	{ \
+		bits &= ~mask; \
+	}
+
 #define CPU_STATUS_N 0x80 // Negative
 #define CPU_STATUS_V 0x40 // Overflow
 #define CPU_STATUS_M 0x20 // A register size (0 -> 16-bit, 1 -> 8-bit)

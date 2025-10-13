@@ -6,6 +6,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+typedef int bool;
+
+#define true 1
+#define false 0
+
 uint8_t check_bit8(uint8_t ps, uint8_t mask)
 {
 	if((ps & mask) == mask)
@@ -229,6 +234,11 @@ uint32_t addr_IMM(struct Ricoh_5A22 *cpu)
 
 void ADC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 {
+	bool carry = false;
+	bool negative = false;
+	bool overflow = false;
+	bool zero = false;
+
 	if(check_bit8(cpu->cpu_status, CPU_STATUS_M)) // 8 bit
 	{
 		uint8_t operand = DB_read(memory, addr);
@@ -260,11 +270,6 @@ void ADC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 				suml_1 = suml_0 ^ coutl_0;
 				coutl_1 = suml_0 & coutl_0;
 
-				if(check_bit8(coutl_1, 0x40))
-				{
-					cpu->cpu_status |= CPU_STATUS_V;
-				}
-
 				coutl_1 = coutl_1 << 1;
 			}
 
@@ -285,6 +290,11 @@ void ADC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 			uint8_t sumh_1 = sumh_0 ^ cin;
 			uint8_t couth_1 = (sumh_0 & cin) | couth_0;
 
+			if(check_bit8(couth_1, 0x40))
+			{
+				overflow = true;
+			}
+
 			couth_1 = couth_1 << 1;
 
 			while(couth_1 != 0)
@@ -297,20 +307,32 @@ void ADC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 
 				if(check_bit8(couth_1, 0x40))
 				{
-					cpu->cpu_status |= CPU_STATUS_V;
+					overflow = true;
 				}
 
 				couth_1 = couth_1 << 1;
 			}
 
+
 			if(sumh_1 > 0x09)
 			{
 				sumh_1 += 0x06;
-				cpu->cpu_status |= CPU_STATUS_C;
+
+				carry = true;
 			}
 			else 
 			{
 				cin = 0x00;
+			}
+
+			if(check_bit8(sumh_1, 0x80))
+			{
+				negative = true;	
+			}
+
+			if(((sumh_1 << 4) | suml_1) == 0)
+			{
+				zero = true;
 			}
 
 			suml_1 &= 0x0F;
@@ -331,12 +353,12 @@ void ADC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 
 			if(check_bit8(cout_1, 0x80))
 			{
-				cpu->cpu_status |= CPU_STATUS_C;
+				carry = true;
 			}
 
 			if(check_bit8(cout_1, 0x40))
 			{
-				cpu->cpu_status |= CPU_STATUS_V;
+				overflow = true;
 			}
 
 			cout_1 = cout_1 << 1;
@@ -351,12 +373,12 @@ void ADC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 
 				if(check_bit8(cout_1, 0x80))
 				{
-					cpu->cpu_status |= CPU_STATUS_C;
+					carry = true;
 				}
 
 				if(check_bit8(cout_1, 0x40))
 				{
-					cpu->cpu_status |= CPU_STATUS_V;
+					overflow = true;
 				}
 
 				cout_1 = cout_1 << 1;
@@ -364,12 +386,12 @@ void ADC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 
 			if(check_bit8(cout_1, 0x80))
 			{
-				cpu->cpu_status |= CPU_STATUS_N;
+				negative = true;
 			}
 
 			if(sum_1 == 0)
 			{
-				cpu->cpu_status |= CPU_STATUS_Z;
+				zero = true;
 			}
 
 			cpu->register_A = cpu->register_A & 0xFF00;
@@ -490,6 +512,11 @@ void ADC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 			uint8_t sumbh_1 = sumbh_0 ^ cin;
 			uint8_t coutbh_1 = (sumbh_0 & cin) | coutbh_0;
 
+			if(check_bit8(coutbh_1, 0x40))
+			{
+				overflow = true;
+			}
+
 			coutbh_1 = coutbh_1 << 1;
 
 			while(coutbh_1 != 0)
@@ -502,7 +529,7 @@ void ADC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 
 				if(check_bit8(coutbh_1, 0x40))
 				{
-					cpu->cpu_status |= CPU_STATUS_V;
+					overflow = true;
 				}
 
 				coutbh_1 = coutbh_1 << 1;
@@ -510,12 +537,23 @@ void ADC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 
 			if(sumbh_1 > 0x09)
 			{
-				cpu->cpu_status |= CPU_STATUS_C;
 				sumbh_1 += 0x06;
+
+				carry = true;
 			}
 			else 
 			{
 				cin = 0x00;
+			}
+
+			if(check_bit8(sumbh_1, 0x80))
+			{
+				negative = true;	
+			}
+
+			if((((((((0x0000 | sumbh_1) << 4) | sumbl_1) << 4) | sumah_1) << 4) | sumal_1) == 0)
+			{
+				zero = true;
 			}
 
 			sumal_1 &= 0x0F;
@@ -539,12 +577,12 @@ void ADC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 
 			if(check_bit16(cout_1, 0x8000))
 			{
-				cpu->cpu_status |= CPU_STATUS_C;
+				carry = true;
 			}
 
 			if(check_bit16(cout_1, 0x4000))
 			{
-				cpu->cpu_status |= CPU_STATUS_V;
+				overflow = true;
 			}
 
 			cout_1 = cout_1 << 1;
@@ -559,12 +597,12 @@ void ADC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 
 				if(check_bit16(cout_1, 0x8000))
 				{
-					cpu->cpu_status |= CPU_STATUS_C;
+					carry = true;
 				}
 
 				if(check_bit16(cout_1, 0x4000))
 				{
-					cpu->cpu_status |= CPU_STATUS_V;
+					carry = true;
 				}
 
 				cout_1 = cout_1 << 1;
@@ -572,17 +610,22 @@ void ADC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 
 			if(check_bit16(cout_1, 0x8000))
 			{
-				cpu->cpu_status |= CPU_STATUS_N;
+				negative = true;
 			}
 
 			if(sum_1 == 0)
 			{
-				cpu->cpu_status |= CPU_STATUS_Z;
+				zero = true;
 			}
 
 			cpu->register_A = sum_1;
 		}
 	}
+
+	BIT_SECL(cpu->cpu_status, CPU_STATUS_N, negative);
+	BIT_SECL(cpu->cpu_status, CPU_STATUS_V, overflow);
+	BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, zero);
+	BIT_SECL(cpu->cpu_status, CPU_STATUS_C, carry);
 }
 
 void AND(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
@@ -594,15 +637,8 @@ void AND(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 
 		uint8_t result = accumulator & operand;
 
-		if(check_bit8(result, 0x80))
-		{
-			cpu->cpu_status |= CPU_STATUS_N;
-		}
-
-		if(result == 0x00)
-		{
-			cpu->cpu_status |= CPU_STATUS_Z;
-		}
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit8(operand, 0x40));
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (operand == 0));
 
 		cpu->register_A = (cpu->register_A & 0xFF00) | result;
 	}
@@ -613,17 +649,72 @@ void AND(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 
 		uint16_t result = accumulator & operand;
 
-		if(check_bit16(result, 0x8000))
-		{
-			cpu->cpu_status |= CPU_STATUS_N;
-		}
-
-		if(result == 0x0000)
-		{
-			cpu->cpu_status |= CPU_STATUS_Z;
-		}
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit16(operand, 0x4000));
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (operand == 0));
 
 		cpu->register_A = result;
+	}
+}
+
+void ASL(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
+{
+	if(check_bit8(cpu->cpu_status, CPU_STATUS_M))
+	{
+		uint8_t operand = DB_read(memory, addr);
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_C, check_bit8(operand, 0x80));
+		
+		operand = operand << 1;
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit8(operand, 0x40));
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (operand == 0));
+
+		DB_write(memory, addr, operand);
+	}
+	else 
+	{
+		uint16_t operand = LE_COMBINE_2BYTE(DB_read(memory, addr), DB_read(memory, addr + 1));
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_C, check_bit16(operand, 0x8000));
+
+		operand = operand << 1;
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit16(operand, 0x4000));
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (operand == 0));
+
+		DB_write(memory, addr, (uint8_t)(operand & 0x00FF));
+		DB_write(memory, addr + 1, (uint8_t)((operand & 0xFF00) >> 8));
+	}
+}
+
+void ASL_A(struct Ricoh_5A22 *cpu, struct Memory *memory)
+{
+	if(check_bit8(cpu->cpu_status, CPU_STATUS_M))
+	{
+		uint8_t operand = cpu->register_A & 0x00FF;
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_C, check_bit8(operand, 0x80));
+		
+		operand = operand << 1;
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit8(operand, 0x40));
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (operand == 0));
+
+		cpu->register_A &= 0xFF00;
+		cpu->register_A |= operand;
+	}
+	else 
+	{
+		uint16_t operand = cpu->register_A;
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_C, check_bit16(operand, 0x8000));
+
+		operand = operand << 1;
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit16(operand, 0x4000));
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (operand == 0));
+
+		cpu->register_A = operand;
 	}
 }
 
@@ -810,7 +901,30 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		//
 		// ASL
 		//
+		case OPCODE_ASL_ABS:
+			data_addr = addr_ABS(cpu, memory);
+			ASL(cpu, memory, data_addr);
 
+			break;
+		case OPCODE_ASL_ACC:
+			ASL_A(cpu, memory);
+
+			break;
+		case OPCODE_ASL_ABS_IIX:
+			data_addr = addr_ABS_IIX(cpu, memory);
+			ASL(cpu, memory, data_addr);
+
+			break;
+		case OPCODE_ASL_DIR:
+			data_addr = addr_DIR(cpu, memory);
+			ASL(cpu, memory, data_addr);
+
+			break;
+		case OPCODE_ASL_DIR_IX:
+			data_addr = addr_DIR_IX(cpu, memory);
+			ASL(cpu, memory, data_addr);
+
+			break;
 		//
 		// BCC
 		//

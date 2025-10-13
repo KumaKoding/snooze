@@ -24,16 +24,20 @@ int main()
 	init_ricoh_5a22(&cpu, &memory);
 
 	cpu.cpu_status &= ~CPU_STATUS_M;
+	cpu.register_A = 0x0001;
+	cpu.data_bank = 0x7E;
 
-	cpu.register_A = 0;
 
-	ROM_write(&memory, program_start, OPCODE_ADC_IMM);
-	ROM_write(&memory, program_start + 1, 0x10);
-	ROM_write(&memory, program_start + 2, 0x10);
+	ROM_write(&memory, program_start, OPCODE_ASL_ABS);
+	ROM_write(&memory, program_start + 1, 0x00);
+	ROM_write(&memory, program_start + 2, 0x00);
+
+	DB_write(&memory, 0x7E0000, 0x00FF);
+	printf("%u\n", LE_COMBINE_2BYTE(DB_read(&memory, 0x7E0000), DB_read(&memory, 0x7E0001)));
 
 	decode_execute(&cpu, &memory);
+	printf("%u\n", LE_COMBINE_2BYTE(DB_read(&memory, 0x7E0000), DB_read(&memory, 0x7E0001)));
 
-	printf("%d\n", cpu.register_A);
 
 
 	return 0;
