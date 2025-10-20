@@ -10,6 +10,9 @@
 #define BUS_A_GENERAL_DMA_ACCESS_SPEED 2.68
 #define CONTROLLER_PORT_ACCESS_SPEED 1.79
 
+#define LE_HBYTE16(u16) (uint8_t)((u16 & 0xFF00) >> 8)
+#define LE_LBYTE16(u16) (uint8_t)(u16 & 0x00FF)
+
 #define LE_COMBINE_BANK_SHORT(bank, us) (uint32_t)(((((0x00000000 | bank) << 8) | ((us & 0xFF00) >> 8)) << 8) | (us & 0x00FF))
 #define LE_COMBINE_BANK_2BYTE(bank, b1, b2) (uint32_t)(((((0x00000000 | bank) << 8) | b2) << 8) | b1)
 #define LE_COMBINE_2BYTE(b1, b2) (uint16_t)(((0x0000 | b2) << 8) | b1)
@@ -192,7 +195,7 @@
 #define OPCODE_EOR_ABS_IIY 0x59
 #define OPCODE_EOR_ABS_L 0x4F
 #define OPCODE_EOR_ABS_LIX 0x5F
-#define OPCODE_EOR_ABS_II 0x5D
+// #define OPCODE_EOR_ABS_II 0x5D
 #define OPCODE_EOR_DIR 0x45
 #define OPCODE_EOR_STK_R 0x43
 #define OPCODE_EOR_DIR_IX 0x55
