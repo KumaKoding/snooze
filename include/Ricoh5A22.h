@@ -217,10 +217,10 @@
 
 #define OPCODE_INY_IMP 0xC8
 
-#define OPCODE_JML_ABS_I 0xDC
+#define OPCODE_JML_ABS_IL 0xDC
+#define OPCODE_JML_ABS_L 0x5C
 
 #define OPCODE_JMP_ABS 0x4C
-#define OPCODE_JMP_ABS_L 0x5C
 #define OPCODE_JMP_ABS_I 0x6C
 #define OPCODE_JMP_ABS_II 0x7C
 

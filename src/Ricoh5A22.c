@@ -119,6 +119,17 @@ uint32_t addr_ABS_I(struct Ricoh_5A22 *cpu, struct Memory *memory)
 	return addr_effective;
 }
 
+uint32_t addr_ABS_IL(struct Ricoh_5A22 *cpu, struct Memory *memory)
+{
+	uint32_t oper = LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr);
+	uint32_t addr = LE_COMBINE_2BYTE(DB_read(memory, oper), DB_read(memory, oper + 1));
+	uint32_t addr_indirect = LE_COMBINE_3BYTE(DB_read(memory, addr), DB_read(memory, addr + 1), DB_read(memory, addr + 2));
+
+	cpu->program_ctr += 2;
+
+	return addr_indirect;
+}
+
 uint32_t addr_ABS_II(struct Ricoh_5A22 *cpu, struct Memory *memory)
 {
 	uint32_t oper = LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr);
@@ -747,7 +758,7 @@ void ASL(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 	}
 }
 
-void ASL_A(struct Ricoh_5A22 *cpu, struct Memory *memory)
+void ASL_A(struct Ricoh_5A22 *cpu)
 {
 	if(accumulator_size(cpu) == 8)
 	{
@@ -1113,7 +1124,7 @@ void DEC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 	}
 }
 
-void DEC_A(struct Ricoh_5A22 *cpu, struct Memory *memory)
+void DEC_A(struct Ricoh_5A22 *cpu)
 {
 	if(accumulator_size(cpu) == 8)
 	{
@@ -1217,6 +1228,138 @@ void EOR(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 
 		cpu->register_A = result;
 	}
+}
+
+void INC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
+{
+	if(accumulator_size(cpu) == 8)
+	{
+		uint8_t operand = DB_read(memory, addr);
+		
+		uint8_t result = operand + 1;
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit8(result, 0x80));
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (result == 0));
+
+		DB_write(memory, addr, result);
+	}
+	else 
+	{
+		uint16_t operand = LE_COMBINE_2BYTE(DB_read(memory, addr), DB_read(memory, addr + 1));
+
+		uint16_t result = operand + 1;
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit16(result, 0x8000));
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (result == 0));
+
+		DB_write(memory, addr, LE_LBYTE16(result));
+		DB_write(memory, addr + 1, LE_HBYTE16(result));
+	}
+}
+
+void INC_A(struct Ricoh_5A22 *cpu)
+{
+	if(accumulator_size(cpu) == 8)
+	{
+		uint8_t operand = LE_LBYTE16(cpu->register_A);
+		
+		uint8_t result = operand + 1;
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit8(result, 0x80));
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (result == 0));
+
+		cpu->register_A &= 0xFF00;
+		cpu->register_A |= result;
+	}
+	else 
+	{
+		uint16_t operand = cpu->register_A;
+
+		uint16_t result = operand + 1;
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit16(result, 0x8000));
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (result == 0));
+
+		cpu->register_A = result;
+	}
+}
+
+void INX(struct Ricoh_5A22 *cpu)
+{
+	if(index_size(cpu) == 8)
+	{
+		uint8_t index = LE_LBYTE16(cpu->register_X);
+		uint8_t result = index + 1;
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit8(result, 0x80));
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (result == 0));
+
+		cpu->register_X &= 0xFF00;
+		cpu->register_X |= result;
+	}
+	else 
+	{
+		uint16_t index = cpu->register_X;
+		uint16_t result = index + 1;
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit16(result, 0x8000));
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (result == 0));
+
+		cpu->register_X = result;
+	}
+}
+
+void INY(struct Ricoh_5A22 *cpu)
+{
+	if(index_size(cpu) == 8)
+	{
+		uint8_t index = LE_LBYTE16(cpu->register_Y);
+		uint8_t result = index + 1;
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit8(result, 0x80));
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (result == 0));
+
+		cpu->register_Y &= 0xFF00;
+		cpu->register_Y |= result;
+	}
+	else 
+	{
+		uint16_t index = cpu->register_Y;
+		uint16_t result = index + 1;
+
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit16(result, 0x8000));
+		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (result == 0));
+
+		cpu->register_Y = result;
+	}
+}
+
+void JMP(struct Ricoh_5A22 *cpu, uint32_t addr)
+{
+	cpu->program_bank = (addr & 0x00FF0000) >> 16;
+	cpu->program_ctr = addr & 0x0000FFFF;
+}
+
+void JSR(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
+{
+	DB_write(memory, cpu->stack_ptr, LE_HBYTE16(cpu->program_ctr - 1));
+	DB_write(memory, cpu->stack_ptr - 1, LE_LBYTE16(cpu->program_ctr - 1));
+
+	cpu->stack_ptr -= 2;
+
+	cpu->program_ctr = addr & 0x0000FFFF;
+}
+
+void JSL(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
+{
+	DB_write(memory, cpu->stack_ptr, cpu->program_bank);
+	DB_write(memory, cpu->stack_ptr - 1, LE_HBYTE16(cpu->program_ctr - 1));
+	DB_write(memory, cpu->stack_ptr - 2, LE_LBYTE16(cpu->program_ctr - 1));
+
+	cpu->stack_ptr -= 3;
+
+	cpu->program_bank = (addr & 0x00FF0000) >> 16;
+	cpu->program_ctr = addr & 0x0000FFFF;
 }
 
 void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
@@ -1408,7 +1551,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 
 			break;
 		case OPCODE_ASL_ACC:
-			ASL_A(cpu, memory);
+			ASL_A(cpu);
 
 			break;
 		case OPCODE_ASL_ABS_IIX:
@@ -1701,7 +1844,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 
 			break;
 		case OPCODE_DEC_ACC:
-			DEC_A(cpu, memory);
+			DEC_A(cpu);
 
 			break;
 		case OPCODE_DEC_ABS_IIX:
@@ -1814,31 +1957,96 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		//
 		// INC
 		//
+		case OPCODE_INC_ABS:
+			data_addr = addr_ABS(cpu, memory);
+			INC(cpu, memory, data_addr);
 
+			break;
+		case OPCODE_INC_ACC:
+			INC_A(cpu);
+
+			break;
+		case OPCODE_INC_ABS_IIX:
+			data_addr = addr_ABS_IIX(cpu, memory);
+			INC(cpu, memory, data_addr);
+
+			break;
+		case OPCODE_INC_DIR:
+			data_addr = addr_DIR(cpu, memory);
+			INC(cpu, memory, data_addr);
+
+			break;
+		case OPCODE_INC_DIR_IX:
+			data_addr = addr_DIR_IX(cpu, memory);
+			INC(cpu, memory, data_addr);
+
+			break;
 		//
 		// INX
 		//
-
+		case OPCODE_INX_IMP:
+			INX(cpu);
+			
+			break;
 		//
 		// INY
 		//
-
+		case OPCODE_INY_IMP:
+			INY(cpu);
+			
+			break;
 		//
 		// JML
 		//
+		case OPCODE_JML_ABS_IL:
+			data_addr = addr_ABS_IL(cpu, memory);
+			JMP(cpu, data_addr);
 
+			break;
+		case OPCODE_JML_ABS_L:
+			data_addr = addr_ABS_L(cpu, memory);
+			JMP(cpu, data_addr);
+
+			break;
 		//
 		// JMP
 		//
+		case OPCODE_JMP_ABS:
+			data_addr = addr_ABS(cpu, memory);
+			JMP(cpu, data_addr);
 
+			break;
+		case OPCODE_JMP_ABS_I:
+			data_addr = addr_ABS_I(cpu, memory);
+			JMP(cpu, data_addr);
+
+			break;
+		case OPCODE_JMP_ABS_II:
+			data_addr = addr_ABS_II(cpu, memory);
+			JMP(cpu, data_addr);
+
+			break;
 		//
 		// JSL
 		//
+		case OPCODE_JSL_ABS_L:
+			data_addr = addr_ABS_L(cpu, memory);
+			JSL(cpu, memory, data_addr);
 
+			break;
 		//
 		// JSR
 		//
+		case OPCODE_JSR_ABS:
+			data_addr = addr_ABS(cpu, memory);
+			JSR(cpu, memory, data_addr);
 
+			break;
+		case OPCODE_JSR_ABS_II:
+			data_addr = addr_ABS_II(cpu, memory);
+			JSR(cpu, memory, data_addr);
+
+			break;
 		//
 		// LDA
 		//
