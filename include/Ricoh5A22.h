@@ -48,7 +48,7 @@
 #define CPU_STATUS_I 0x04 // Interrupt Request (IRQ) disable
 #define CPU_STATUS_Z 0x02 // Zero
 #define CPU_STATUS_C 0x01 // Carry
-#define CPU_STATUS_E 0x00 // 6502 emulation mode (8-bit) -> set first bit to 0
+#define CPU_STATUS_E 0x01 // 6502 emulation mode (8-bit) -> set first bit to 0
 #define CPU_STATUS_B 0x10 // Break (emulation mode)
 
 /* SOURCE: https://www.westerndesigncenter.com/wdc/documentation/w65c816s.pdf

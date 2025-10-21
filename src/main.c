@@ -23,6 +23,7 @@ int main()
 	struct Ricoh_5A22 cpu;
 	init_ricoh_5a22(&cpu, &memory);
 
+	cpu.cpu_emulation6502 &= ~CPU_STATUS_E;
 	cpu.cpu_status &= ~CPU_STATUS_M;
 	cpu.register_A = 0x0001;
 	cpu.data_bank = 0x7E;
@@ -32,7 +33,7 @@ int main()
 	ROM_write(&memory, program_start + 1, 0x00);
 	ROM_write(&memory, program_start + 2, 0x00);
 
-	DB_write(&memory, 0x7E0000, 0x00FF);
+	DB_write(&memory, 0x7E0000, 0xFF);
 	printf("%u\n", LE_COMBINE_2BYTE(DB_read(&memory, 0x7E0000), DB_read(&memory, 0x7E0001)));
 
 	decode_execute(&cpu, &memory);
