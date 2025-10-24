@@ -13,6 +13,9 @@
 #define LE_HBYTE16(u16) (uint8_t)((u16 & 0xFF00) >> 8)
 #define LE_LBYTE16(u16) (uint8_t)(u16 & 0x00FF)
 
+#define SWP_LE_LBYTE16(u16, u8) ((u16 & 0xFF00) | u8)
+#define SWP_LE_HBYTE16(u16, u8) ((u16 & 0x00FF) | ((0x0000 | u8) << 8))
+
 #define LE_COMBINE_BANK_SHORT(bank, us) (uint32_t)(((((0x00000000 | bank) << 8) | ((us & 0xFF00) >> 8)) << 8) | (us & 0x00FF))
 #define LE_COMBINE_BANK_2BYTE(bank, b1, b2) (uint32_t)(((((0x00000000 | bank) << 8) | b2) << 8) | b1)
 #define LE_COMBINE_2BYTE(b1, b2) (uint16_t)(((0x0000 | b2) << 8) | b1)
@@ -343,7 +346,7 @@
 #define OPCODE_SBC_ABS_LIX 0xFF
 #define OPCODE_SBC_DIR 0xE5
 #define OPCODE_SBC_STK_R 0xE3
-#define OPCODE_SBC_DIR_IX 0F5
+#define OPCODE_SBC_DIR_IX 0xF5
 #define OPCODE_SBC_DIR_I 0xF2
 #define OPCODE_SBC_DIR_IL 0xE7
 #define OPCODE_SBC_STK_RII 0xF3
