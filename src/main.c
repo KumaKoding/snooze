@@ -26,38 +26,30 @@ int main()
 	cpu.cpu_emulation6502 &= ~CPU_STATUS_E;
 	cpu.cpu_status &= ~CPU_STATUS_M;
 	cpu.cpu_status &= ~CPU_STATUS_X;
+	cpu.cpu_status |= CPU_STATUS_D;
 
-	cpu.register_A = 3;
-	cpu.register_X = 0x100;
-	cpu.register_Y = 0x150;
+	cpu.register_A = 0x3034;
 
-	ROM_write(&memory, program_start, OPCODE_MVP_XYC);
-	ROM_write(&memory, program_start + 1, 0x00);
-	ROM_write(&memory, program_start + 2, 0x01);
-
-	DB_write(&memory, 0x000100, 0x01);
-	DB_write(&memory, 0x0000ff, 0x02);
-	DB_write(&memory, 0x0000fe, 0x03);
-	DB_write(&memory, 0x0000fd, 0x04);
-	DB_write(&memory, 0x0000fc, 0x05);
+	ROM_write(&memory, program_start, OPCODE_SBC_IMM);
+	ROM_write(&memory, program_start + 1, 0x30);
+	ROM_write(&memory, program_start + 2, 0x21);
 
 	decode_execute(&cpu, &memory);
-	decode_execute(&cpu, &memory);
-	decode_execute(&cpu, &memory);
-	decode_execute(&cpu, &memory);
-	decode_execute(&cpu, &memory);
-	// decode_execute(&cpu, &memory);
 
-	printf("%02x ", DB_read(&memory, 0x010150));
-	printf("%02x ", DB_read(&memory, 0x01014f));
-	printf("%02x ", DB_read(&memory, 0x01014e));
-	printf("%02x ", DB_read(&memory, 0x01014d));
-	printf("%02x\n", DB_read(&memory, 0x01014c));
-
+	printf("%u\n", cpu.register_A);
 	printf("%04x\n", cpu.register_A);
-	printf("%04x\n", cpu.register_X);
-	printf("%04x\n", cpu.register_Y);
-	printf("%02x\n", cpu.data_bank);
+
+	uint8_t c = cpu.cpu_status;
+
+	printf("%c", ((c >> 7) & 0b00000001) ? 'N' : 'n');
+	printf("%c", ((c >> 6) & 0b00000001) ? 'V' : 'v');
+	printf("%c", ((c >> 5) & 0b00000001) ? 'M' : 'm');
+	printf("%c", ((c >> 4) & 0b00000001) ? 'X' : 'x');
+	printf("%c", ((c >> 3) & 0b00000001) ? 'D' : 'd');
+	printf("%c", ((c >> 2) & 0b00000001) ? 'I' : 'i');
+	printf("%c", ((c >> 1) & 0b00000001) ? 'Z' : 'z');
+	printf("%c", ((c >> 0) & 0b00000001) ? 'C' : 'c');
+	printf("\n");
 
 	return 0;
 
