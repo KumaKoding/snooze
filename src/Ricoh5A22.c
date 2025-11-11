@@ -2288,6 +2288,7 @@ void STA(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 
 void STP(struct Ricoh_5A22 *cpu)
 {
+	// takes 2 cycles like normal, but the last cycle is to halt the program
 	cpu->LPM = 1;
 }
 
@@ -2588,6 +2589,40 @@ void TYX(struct Ricoh_5A22 *cpu)
 		BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit16(y, 0x8000));
 		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (y == 0x0000));
 	}
+}
+
+void WAI(struct Ricoh_5A22 *cpu)
+{
+	// takes 2 cycles like normal, but the last cycle is to halt the program
+	cpu->RDY = 0;
+}
+
+void WDM()
+{
+	// No operation
+
+	return;
+}
+
+void XBA(struct Ricoh_5A22 *cpu)
+{
+	uint8_t A = LE_LBYTE16(cpu->register_A);
+	uint8_t B = LE_HBYTE16(cpu->register_A);
+
+	cpu->register_A = SWP_LE_LBYTE16(cpu->register_A, B);
+	cpu->register_A = SWP_LE_HBYTE16(cpu->register_A, A);
+
+	BIT_SECL(cpu->cpu_status, CPU_STATUS_N, check_bit8(LE_LBYTE16(cpu->register_A), 0x80));
+	BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (LE_LBYTE16(cpu->register_A) == 0x00));
+}
+
+void XCE(struct Ricoh_5A22 *cpu)
+{
+	uint8_t C = cpu->cpu_status & CPU_STATUS_C;
+	uint8_t E = cpu->cpu_emulation6502 & CPU_STATUS_E;
+
+	cpu->cpu_status = (cpu->cpu_status & (~CPU_STATUS_E)) | E;
+	cpu->cpu_emulation6502 = (cpu->cpu_emulation6502 & (~CPU_STATUS_C)) | C;
 }
 
 void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
@@ -4064,18 +4099,32 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		//
 		// WAI
 		//
-		
+		case OPCODE_WAI_IMP:
+			WAI(cpu);
+
+			break;
 		//
 		// WDM
 		//
+		case OPCODE_WDM_IMM:
+			data_addr = addr_IMM_8(cpu);
+			WDM();
 
+			break;
 		//
 		// XBA
 		//
+		case OPCODE_XBA_IMP:
+			XBA(cpu);
 
+			break;
 		//
 		// XCE
 		//
+		case OPCODE_XCE_IMP:
+			XCE(cpu);
+
+			break;
 		default:
 			break;
 	}
@@ -4099,5 +4148,8 @@ void reset_ricoh_5a22(struct Ricoh_5A22 *cpu, struct Memory *memory)
 
 	cpu->RDY = 1;
 	cpu->LPM = 0;
+
+	cpu->NMI_line = 0;
+	cpu->IRQ_line = 0;
 }
 

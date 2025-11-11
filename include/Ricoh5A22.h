@@ -424,7 +424,7 @@
 
 #define OPCODE_WAI_IMP 0xCB
 
-#define OPCODE_WDM_IMP 0x42
+#define OPCODE_WDM_IMM 0x42
 
 #define OPCODE_XBA_IMP 0xEB
 
@@ -451,6 +451,9 @@ struct Ricoh_5A22
 
 	int LPM;
 	int RDY;
+
+	int NMI_line;
+	int IRQ_line;
 };
 
 void reset_ricoh_5a22(struct Ricoh_5A22 *cpu, struct Memory *memory);
