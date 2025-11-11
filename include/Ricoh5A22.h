@@ -377,7 +377,7 @@
 #define OPCODE_STA_DIR_IIY 0x91
 #define OPCODE_STA_DIR_ILI 0x97
 
-#define OPCODE_STP_IMP 0xD8
+#define OPCODE_STP_IMP 0xDB
 
 #define OPCODE_STX_ABS 0x8E
 #define OPCODE_STX_DIR 0x86
@@ -394,7 +394,7 @@
 
 #define OPCODE_TAX_IMP 0xAA
 
-#define OPCODE_TAY_IMP 0xAB
+#define OPCODE_TAY_IMP 0xA8
 
 #define OPCODE_TCD_IMP 0x5B
 
@@ -408,25 +408,25 @@
 #define OPCODE_TSB_ABS 0x0C
 #define OPCODE_TSB_DIR 0x04
 
-#define OPCODE_TSC_ACC 0x3B
+#define OPCODE_TSC_IMP 0x3B
 
-#define OPCODE_TSX_ACC 0xBA
+#define OPCODE_TSX_IMP 0xBA
 
-#define OPCODE_TXA_ACC 0x8A
+#define OPCODE_TXA_IMP 0x8A
 
-#define OPCODE_TXS_ACC 0x9A
+#define OPCODE_TXS_IMP 0x9A
 
-#define OPCODE_TXY_ACC 0x9B
+#define OPCODE_TXY_IMP 0x9B
 
-#define OPCODE_TYA_ACC 0x98
+#define OPCODE_TYA_IMP 0x98
 
-#define OPCODE_TYX_ACC 0xBB
+#define OPCODE_TYX_IMP 0xBB
 
-#define OPCODE_WAI_ACC 0xCB
+#define OPCODE_WAI_IMP 0xCB
 
-#define OPCODE_WDM_ACC 0x42
+#define OPCODE_WDM_IMP 0x42
 
-#define OPCODE_XBA_ACC 0xEB
+#define OPCODE_XBA_IMP 0xEB
 
 #define OPCODE_XCE_IMP 0xFB
 
@@ -448,9 +448,12 @@ struct Ricoh_5A22
 
 	uint8_t cpu_emulation6502;
 	uint8_t cpu_status;
+
+	int LPM;
+	int RDY;
 };
 
-void init_ricoh_5a22(struct Ricoh_5A22 *cpu, struct Memory *memory);
+void reset_ricoh_5a22(struct Ricoh_5A22 *cpu, struct Memory *memory);
 void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory);
 
 #endif // RICOH_5A22_H

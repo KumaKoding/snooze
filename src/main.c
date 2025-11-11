@@ -21,18 +21,21 @@ int main()
 		);
 
 	struct Ricoh_5A22 cpu;
-	init_ricoh_5a22(&cpu, &memory);
+	reset_ricoh_5a22(&cpu, &memory);
 
 	cpu.cpu_emulation6502 &= ~CPU_STATUS_E;
 	cpu.cpu_status &= ~CPU_STATUS_M;
 	cpu.cpu_status &= ~CPU_STATUS_X;
-	cpu.cpu_status |= CPU_STATUS_D;
 
-	cpu.register_A = 0x3034;
+	cpu.register_A = 0x0080;
+	cpu.data_bank = 0x7E;
 
-	ROM_write(&memory, program_start, OPCODE_SBC_IMM);
-	ROM_write(&memory, program_start + 1, 0x30);
-	ROM_write(&memory, program_start + 2, 0x21);
+	ROM_write(&memory, program_start, OPCODE_TRB_ABS);
+	ROM_write(&memory, program_start + 1, 0x00);
+	ROM_write(&memory, program_start + 2, 0x00);
+
+	DB_write(&memory, 0x7E0000, 0x10);
+	DB_write(&memory, 0x7E0001, 0x00);
 
 	decode_execute(&cpu, &memory);
 
