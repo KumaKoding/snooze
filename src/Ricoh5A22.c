@@ -115,30 +115,15 @@ void increment_SP(struct Ricoh_5A22 *cpu, int n)
 
 void push_SP(struct Ricoh_5A22 *cpu, struct Memory *memory, uint8_t write_val)
 {
-	if(check_bit8(cpu->cpu_emulation6502, CPU_STATUS_E))
-	{
-		DB_write(memory, get_SP(cpu), write_val);
-		decrement_SP(cpu, 1);
-	}
-	else 
-	{
-		DB_write(memory, get_SP(cpu), write_val);
-		decrement_SP(cpu, 1);
-	}
+	printf("SP PUSH: %02x\n", write_val);
+	DB_write(memory, get_SP(cpu), write_val);
+	decrement_SP(cpu, 1);
 }
 
 uint8_t pull_SP(struct Ricoh_5A22 *cpu, struct Memory *memory)
 {
-	if(check_bit8(cpu->cpu_emulation6502, CPU_STATUS_E))
-	{
-		increment_SP(cpu, 1);
-		return DB_read(memory, get_SP(cpu));
-	}
-	else 
-	{
-		increment_SP(cpu, 1);
-		return DB_read(memory, get_SP(cpu));
-	}
+	increment_SP(cpu, 1);
+	return DB_read(memory, get_SP(cpu));
 }
 
 uint32_t addr_ABS(struct Ricoh_5A22 *cpu, struct Memory *memory)
@@ -881,6 +866,7 @@ void ADC(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 
 void AND(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 {
+	printf("AND: %06x\n", addr);
 	if(accumulator_size(cpu) == 8)
 	{
 		uint8_t operand = DB_read(memory, addr);
@@ -909,6 +895,7 @@ void AND(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 
 void ASL(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 {
+	printf("ASL: %06x\n", addr);
 	if(accumulator_size(cpu) == 8)
 	{
 		uint8_t operand = DB_read(memory, addr);
@@ -921,7 +908,6 @@ void ASL(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 		BIT_SECL(cpu->cpu_status, CPU_STATUS_Z, (operand == 0));
 
 		DB_write(memory, addr, operand);
-		printf("adlkjfa\n");
 	}
 	else 
 	{
@@ -1507,8 +1493,10 @@ void JMP(struct Ricoh_5A22 *cpu, uint32_t addr)
 
 void JSR(struct Ricoh_5A22 *cpu, struct Memory *memory, uint32_t addr)
 {
-	push_SP(cpu, memory, LE_HBYTE16(cpu->program_bank - 1));
-	push_SP(cpu, memory, LE_LBYTE16(cpu->program_bank - 1));
+	push_SP(cpu, memory, LE_HBYTE16(cpu->program_ctr - 1));
+	push_SP(cpu, memory, LE_LBYTE16(cpu->program_ctr - 1));
+
+	printf("%04x\n", cpu->program_ctr);
 
 	cpu->program_ctr = addr & 0x0000FFFF;
 }
@@ -2138,6 +2126,7 @@ void RTS(struct Ricoh_5A22 *cpu, struct Memory *memory)
 	uint8_t pc_h = pull_SP(cpu, memory);
 
 	cpu->program_ctr = LE_COMBINE_2BYTE(pc_l, pc_h);
+	printf("%04x\n", cpu->program_ctr);
 
 	cpu->program_ctr++;
 }
@@ -2625,10 +2614,14 @@ void XCE(struct Ricoh_5A22 *cpu)
 	cpu->cpu_emulation6502 = (cpu->cpu_emulation6502 & (~CPU_STATUS_C)) | C;
 }
 
+#define DEBUG_OPCODES 1
+
 void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 {
 	uint32_t opcode_addr = LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr);
 	cpu->program_ctr++;
+
+	printf("%06x %02x: ", opcode_addr, DB_read(memory, opcode_addr));
 
 	switch(DB_read(memory, opcode_addr))
 	{
@@ -2638,92 +2631,92 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// ADC
 		//
 		case OPCODE_ADC_ABS:
+			printf("OPCODE_ADC_ABS\n");
 			data_addr = addr_ABS(cpu, memory);
-			printf("%06x\n", data_addr);
 			ADC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ADC_ABS_IIX:
+			printf("OPCODE_ADC_ABS_IIX\n");
 			data_addr = addr_ABS_IIX(cpu, memory);
-			printf("%06x\n", data_addr);
 			ADC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ADC_ABS_IIY:
+			printf("OPCODE_ADC_ABS_IIY\n");
 			data_addr = addr_ABS_IIY(cpu, memory);
-			printf("%06x\n", data_addr);
 			ADC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ADC_ABS_L:
+			printf("OPCODE_ADC_ABS_L\n");
 			data_addr = addr_ABS_L(cpu, memory);
-			printf("%06x\n", data_addr);
 			ADC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ADC_ABS_LIX:
+			printf("OPCODE_ADC_ABS_LIX\n");
 			data_addr = addr_ABS_LIX(cpu, memory);
-			printf("%06x\n", data_addr);
 			ADC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ADC_DIR:
+			printf("OPCODE_ADC_DIR\n");
 			data_addr = addr_DIR(cpu, memory);
-			printf("%06x\n", data_addr);
 			ADC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ADC_STK_R:
+			printf("OPCODE_ADC_STK_R\n");
 			data_addr = addr_STK_R(cpu, memory);
-			printf("%06x\n", data_addr);
 			ADC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ADC_DIR_IX:
+			printf("OPCODE_ADC_DIR_IX\n");
 			data_addr = addr_DIR_IX(cpu, memory);
-			printf("%06x\n", data_addr);
 			ADC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ADC_DIR_I:
+			printf("OPCODE_ADC_DIR_I\n");
 			data_addr = addr_DIR_I(cpu, memory);
-			printf("%06x\n", data_addr);
 			ADC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ADC_DIR_IL:
+			printf("OPCODE_ADC_DIR_IL\n");
 			data_addr = addr_DIR_IL(cpu, memory);
-			printf("%06x\n", data_addr);
 			ADC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ADC_STK_RII:
+			printf("OPCODE_ADC_STK_RII\n");
 			data_addr = addr_STK_RII(cpu, memory);
-			printf("%06x\n", data_addr);
 			ADC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ADC_DIR_IIX:
+			printf("OPCODE_ADC_DIR_IIX\n");
 			data_addr = addr_DIR_IIX(cpu, memory);
-			printf("%06x\n", data_addr);
 			ADC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ADC_DIR_IIY:
+			printf("OPCODE_ADC_DIR_IIY\n");
 			data_addr = addr_DIR_IIY(cpu, memory);
-			printf("%06x\n", data_addr);
 			ADC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ADC_DIR_ILI:
+			printf("OPCODE_ADC_DIR_ILI\n");
 			data_addr = addr_DIR_ILI(cpu, memory);
-			printf("%06x\n", data_addr);
 			ADC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ADC_IMM:
+			printf("OPCODE_ADC_IMM\n");
 			data_addr = addr_IMM_M(cpu);
-			printf("%06x\n", data_addr);
 			ADC(cpu, memory, data_addr);
 
 			break;	
@@ -2731,76 +2724,91 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// AND
 		//
 		case OPCODE_AND_ABS:
+			printf("OPCODE_AND_ABS\n");
 			data_addr = addr_ABS(cpu, memory);
 			AND(cpu, memory, data_addr);
 
 			break;	
 		case OPCODE_AND_ABS_IIX:
+			printf("OPCODE_AND_ABS_IIX\n");
 			data_addr = addr_ABS_IIX(cpu, memory);
 			AND(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_AND_ABS_IIY:
+			printf("OPCODE_AND_ABS_IIY\n");
 			data_addr = addr_ABS_IIY(cpu, memory);
 			AND(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_AND_ABS_L:
+			printf("OPCODE_AND_ABS_L\n");
 			data_addr = addr_ABS_L(cpu, memory);
 			AND(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_AND_ABS_LIX:
+			printf("OPCODE_AND_ABS_LIX\n");
 			data_addr = addr_ABS_LIX(cpu, memory);
 			AND(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_AND_DIR:
+			printf("OPCODE_AND_DIR\n");
 			data_addr = addr_DIR(cpu, memory);
 			AND(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_AND_STK_R:
+			printf("OPCODE_AND_STK_R\n");
 			data_addr = addr_STK_R(cpu, memory);
 			AND(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_AND_DIR_IX:
+			printf("OPCODE_AND_DIR_IX\n");
 			data_addr = addr_DIR_IX(cpu, memory);
 			AND(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_AND_DIR_I:
+			printf("OPCODE_AND_DIR_I\n");
 			data_addr = addr_DIR_I(cpu, memory);
 			AND(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_AND_DIR_IL:
+			printf("OPCODE_AND_DIR_IL\n");
 			data_addr = addr_DIR_IL(cpu, memory);
 			AND(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_AND_STK_RII:
+			printf("OPCODE_AND_STK_RII\n");
 			data_addr = addr_STK_RII(cpu, memory);
 			AND(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_AND_DIR_IIX:
+			printf("OPCODE_AND_DIR_IIX\n");
 			data_addr = addr_DIR_IIX(cpu, memory);
 			AND(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_AND_DIR_IIY:
+			printf("OPCODE_AND_DIR_IIY\n");
 			data_addr = addr_DIR_IIY(cpu, memory);
 			AND(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_AND_DIR_ILI:
+			printf("OPCODE_AND_DIR_ILI\n");
 			data_addr = addr_DIR_ILI(cpu, memory);
 			AND(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_AND_IMM:
+			printf("OPCODE_AND_IMM\n");
 			data_addr = addr_IMM_M(cpu);
 			AND(cpu, memory, data_addr);
 
@@ -2809,25 +2817,30 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// ASL
 		//
 		case OPCODE_ASL_ABS:
+			printf("OPCODE_ASL_ABS\n");
 			data_addr = addr_ABS(cpu, memory);
 			ASL(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ASL_ACC:
+			printf("OPCODE_ASL_ACC\n");
 			ASL_A(cpu);
 
 			break;
 		case OPCODE_ASL_ABS_IIX:
+			printf("OPCODE_ASL_ABS_IIX\n");
 			data_addr = addr_ABS_IIX(cpu, memory);
 			ASL(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ASL_DIR:
+			printf("OPCODE_ASL_DIR\n");
 			data_addr = addr_DIR(cpu, memory);
 			ASL(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ASL_DIR_IX:
+			printf("OPCODE_ASL_DIR_IX\n");
 			data_addr = addr_DIR_IX(cpu, memory);
 			ASL(cpu, memory, data_addr);
 
@@ -2836,6 +2849,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// BCC
 		//
 		case OPCODE_BCC_REL:
+			printf("OPCODE_BCC_REL\n");
 			data_addr = addr_REL(cpu);
 			BCC(cpu, memory, data_addr);
 
@@ -2844,6 +2858,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// BCS
 		//
 		case OPCODE_BCS_REL:
+			printf("OPCODE_BCS_REL\n");
 			data_addr = addr_REL(cpu);
 			BCS(cpu, memory, data_addr);
 
@@ -2852,6 +2867,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// BEQ
 		//
 		case OPCODE_BEQ_REL:
+			printf("OPCODE_BEQ_REL\n");
 			data_addr = addr_REL(cpu);
 			BEQ(cpu, memory, data_addr);
 
@@ -2860,26 +2876,31 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// BIT
 		//
 		case OPCODE_BIT_ABS:
+			printf("OPCODE_BIT_ABS\n");
 			data_addr = addr_ABS(cpu, memory);
 			BIT(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_BIT_ABS_IIX:
+			printf("OPCODE_BIT_ABS_IIX\n");
 			data_addr = addr_ABS_IIX(cpu, memory);
 			BIT(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_BIT_DIR:
+			printf("OPCODE_BIT_DIR\n");
 			data_addr = addr_DIR(cpu, memory);
 			BIT(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_BIT_DIR_IX:
+			printf("OPCODE_BIT_DIR_IX\n");
 			data_addr = addr_DIR_IX(cpu, memory);
 			BIT(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_BIT_IMM:
+			printf("OPCODE_BIT_IMM\n");
 			data_addr = addr_IMM_M(cpu);
 			BIT_IMM(cpu, memory, data_addr);
 
@@ -2888,6 +2909,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// BMI
 		//
 		case OPCODE_BMI_REL:
+			printf("OPCODE_BMI_REL\n");
 			data_addr = addr_REL(cpu);
 			BMI(cpu, memory, data_addr);
 
@@ -2896,6 +2918,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// BNE
 		//
 		case OPCODE_BNE_REL:
+			printf("OPCODE_BNE_REL\n");
 			data_addr = addr_REL(cpu);
 			BNE(cpu, memory, data_addr);
 
@@ -2904,6 +2927,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// BPL
 		//
 		case OPCODE_BPL_REL:
+			printf("OPCODE_BPL_REL\n");
 			data_addr = addr_REL(cpu);
 			BPL(cpu, memory, data_addr);
 
@@ -2912,6 +2936,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// BRA
 		//
 		case OPCODE_BRA_REL:
+			printf("OPCODE_BRA_REL\n");
 			data_addr = addr_REL(cpu);
 			BRA(cpu, memory, data_addr);
 
@@ -2920,6 +2945,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// BRK
 		//
 		case OPCODE_BRK_STK:
+			printf("OPCODE_BRK_STK\n");
 			BRK(cpu, memory);
 
 			break;
@@ -2927,6 +2953,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// BRL
 		//
 		case OPCODE_BRL_REL_L:
+			printf("OPCODE_BRL_REL_L\n");
 			data_addr = addr_REL_L(cpu);
 			BRL(cpu, memory, data_addr);
 
@@ -2935,6 +2962,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// BVC
 		//
 		case OPCODE_BVC_REL:
+			printf("OPCODE_BVC_REL\n");
 			data_addr = addr_REL(cpu);
 			BVC(cpu, memory, data_addr);
 
@@ -2943,6 +2971,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// BVS
 		//
 		case OPCODE_BVS_REL:
+			printf("OPCODE_BVS_REL\n");
 			data_addr = addr_REL(cpu);
 			BVS(cpu, memory, data_addr);
 
@@ -2951,6 +2980,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// CLC
 		//
 		case OPCODE_CLC_IMP:
+			printf("OPCODE_CLC_IMP\n");
 			CLC(cpu);
 
 			break;
@@ -2958,6 +2988,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// CLD
 		//
 		case OPCODE_CLD_IMP:
+			printf("OPCODE_CLD_IMP\n");
 			CLD(cpu);
 
 			break;
@@ -2965,6 +2996,7 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// CLI
 		//
 		case OPCODE_CLI_IMP:
+			printf("OPCODE_CLI_IMP\n");
 			CLI(cpu);
 
 			break;
@@ -2972,6 +3004,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// CLV
 		//
 		case OPCODE_CLV_IMP:
+			#if DEBUG_OPCODES
+				printf("CLV_IMP\n");
+			#endif
 			CLV(cpu);
 
 			break;
@@ -2979,76 +3014,121 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// CMP
 		//
 		case OPCODE_CMP_ABS:
+			#if DEBUG_OPCODES
+				printf("CMP_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			CMP(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CMP_ABS_IIX:
+			#if DEBUG_OPCODES
+				printf("CMP_ABS_IIX\n");
+			#endif
 			data_addr = addr_ABS_IIX(cpu, memory);
 			CMP(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CMP_ABS_IIY:
+			#if DEBUG_OPCODES
+				printf("CMP_ABS_IIY\n");
+			#endif
 			data_addr = addr_ABS_IIY(cpu, memory);
 			CMP(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CMP_ABS_L:
+			#if DEBUG_OPCODES
+				printf("CMP_ABS_L\n");
+			#endif
 			data_addr = addr_ABS_L(cpu, memory);
 			CMP(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CMP_ABS_LIX:
+			#if DEBUG_OPCODES
+				printf("CMP_ABS_LIX\n");
+			#endif
 			data_addr = addr_ABS_LIX(cpu, memory);
 			CMP(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CMP_DIR:
+			#if DEBUG_OPCODES
+				printf("CMP_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			CMP(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CMP_STK_R:
+			#if DEBUG_OPCODES
+				printf("CMP_STK_R\n");
+			#endif
 			data_addr = addr_STK_R(cpu, memory);
 			CMP(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CMP_DIR_IX:
+			#if DEBUG_OPCODES
+				printf("CMP_DIR_IX\n");
+			#endif
 			data_addr = addr_DIR_IX(cpu, memory);
 			CMP(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CMP_DIR_I:
+			#if DEBUG_OPCODES
+				printf("CMP_DIR_I\n");
+			#endif
 			data_addr = addr_DIR_I(cpu, memory);
 			CMP(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CMP_DIR_IL:
+			#if DEBUG_OPCODES
+				printf("CMP_DIR_IL\n");
+			#endif
 			data_addr = addr_DIR_IL(cpu, memory);
 			CMP(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CMP_STK_RII:
+			#if DEBUG_OPCODES
+				printf("CMP_STK_RII\n");
+			#endif
 			data_addr = addr_STK_RII(cpu, memory);
 			CMP(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CMP_DIR_IIX:
+			#if DEBUG_OPCODES
+				printf("CMP_DIR_IIX\n");
+			#endif
 			data_addr = addr_DIR_IIX(cpu, memory);
 			CMP(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CMP_DIR_IIY:
+			#if DEBUG_OPCODES
+				printf("CMP_DIR_IIY\n");
+			#endif
 			data_addr = addr_DIR_IIY(cpu, memory);
 			CMP(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CMP_DIR_ILI:
+			#if DEBUG_OPCODES
+				printf("CMP_DIR_ILI\n");
+			#endif
 			data_addr = addr_DIR_ILI(cpu, memory);
 			CMP(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CMP_IMM:
+			#if DEBUG_OPCODES
+				printf("CMP_IMM\n");
+			#endif
 			data_addr = addr_IMM_M(cpu);
 			CMP(cpu, memory, data_addr);
 
@@ -3057,6 +3137,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// COP
 		//
 		case OPCODE_COP_STK:
+			#if DEBUG_OPCODES
+				printf("COP_STK\n");
+			#endif
 			COP(cpu, memory);
 
 			break;
@@ -3064,16 +3147,25 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// CPX
 		//
 		case OPCODE_CPX_ABS:
+			#if DEBUG_OPCODES
+				printf("CPX_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			CPX(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CPX_DIR:
+			#if DEBUG_OPCODES
+				printf("CPX_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			CPX(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CPX_IMM:
+			#if DEBUG_OPCODES
+				printf("CPX_IMM\n");
+			#endif
 			data_addr = addr_IMM_X(cpu);
 			CPX(cpu, memory, data_addr);
 
@@ -3082,16 +3174,25 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// CPY
 		//
 		case OPCODE_CPY_ABS:
+			#if DEBUG_OPCODES
+				printf("CPY_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			CPY(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CPY_DIR:
+			#if DEBUG_OPCODES
+				printf("CPY_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			CPY(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_CPY_IMM:
+			#if DEBUG_OPCODES
+				printf("CPY_IMM\n");
+			#endif
 			data_addr = addr_IMM_X(cpu);
 			CPY(cpu, memory, data_addr);
 
@@ -3100,25 +3201,40 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// DEC
 		//
 		case OPCODE_DEC_ABS:
+			#if DEBUG_OPCODES
+				printf("DEC_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			DEC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_DEC_ACC:
+			#if DEBUG_OPCODES
+				printf("DEC_ACC\n");
+			#endif
 			DEC_A(cpu);
 
 			break;
 		case OPCODE_DEC_ABS_IIX:
+			#if DEBUG_OPCODES
+				printf("DEC_ABS_IIX\n");
+			#endif
 			data_addr = addr_ABS_IIX(cpu, memory);
 			DEC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_DEC_DIR:
+			#if DEBUG_OPCODES
+				printf("DEC_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			DEC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_DEC_DIR_IX:
+			#if DEBUG_OPCODES
+				printf("DEC_DIR_IX\n");
+			#endif
 			data_addr = addr_DIR_IX(cpu, memory);
 			DEC(cpu, memory, data_addr);
 
@@ -3127,6 +3243,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// DEX
 		//
 		case OPCODE_DEX_IMP:
+			#if DEBUG_OPCODES
+				printf("DEX_IMP\n");
+			#endif
 			DEX(cpu);
 
 			break;
@@ -3134,6 +3253,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// DEY
 		//
 		case OPCODE_DEY_IMP:
+			#if DEBUG_OPCODES
+				printf("DEY_IMP\n");
+			#endif
 			DEY(cpu);
 
 			break;
@@ -3141,76 +3263,121 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// EOR
 		//
 		case OPCODE_EOR_ABS:
+			#if DEBUG_OPCODES
+				printf("EOR_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			EOR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_EOR_ABS_IIX:
+			#if DEBUG_OPCODES
+				printf("EOR_ABS_IIX\n");
+			#endif
 			data_addr = addr_ABS_IIX(cpu, memory);
 			EOR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_EOR_ABS_IIY:
+			#if DEBUG_OPCODES
+				printf("EOR_ABS_IIY\n");
+			#endif
 			data_addr = addr_ABS_IIY(cpu, memory);
 			EOR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_EOR_ABS_L:
+			#if DEBUG_OPCODES
+				printf("EOR_ABS_L\n");
+			#endif
 			data_addr = addr_ABS_L(cpu, memory);
 			EOR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_EOR_ABS_LIX:
+			#if DEBUG_OPCODES
+				printf("EOR_ABS_LIX\n");
+			#endif
 			data_addr = addr_ABS_LIX(cpu, memory);
 			EOR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_EOR_DIR:
+			#if DEBUG_OPCODES
+				printf("EOR_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			EOR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_EOR_STK_R:
+			#if DEBUG_OPCODES
+				printf("EOR_STK_R\n");
+			#endif
 			data_addr = addr_STK_R(cpu, memory);
 			EOR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_EOR_DIR_IX:
+			#if DEBUG_OPCODES
+				printf("EOR_DIR_IX\n");
+			#endif
 			data_addr = addr_DIR_IX(cpu, memory);
 			EOR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_EOR_DIR_I:
+			#if DEBUG_OPCODES
+				printf("EOR_DIR_I\n");
+			#endif
 			data_addr = addr_DIR_I(cpu, memory);
 			EOR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_EOR_DIR_IL:
+			#if DEBUG_OPCODES
+				printf("EOR_DIR_IL\n");
+			#endif
 			data_addr = addr_DIR_IL(cpu, memory);
 			EOR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_EOR_STK_RII:
+			#if DEBUG_OPCODES
+				printf("EOR_STK_RII\n");
+			#endif
 			data_addr = addr_STK_RII(cpu, memory);
 			EOR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_EOR_DIR_IIX:
+			#if DEBUG_OPCODES
+				printf("EOR_DIR_IIX\n");
+			#endif
 			data_addr = addr_DIR_IIX(cpu, memory);
 			EOR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_EOR_DIR_IIY:
+			#if DEBUG_OPCODES
+				printf("EOR_DIR_IIY\n");
+			#endif
 			data_addr = addr_DIR_IIY(cpu, memory);
 			EOR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_EOR_DIR_ILI:
+			#if DEBUG_OPCODES
+				printf("EOR_DIR_ILI\n");
+			#endif
 			data_addr = addr_DIR_ILI(cpu, memory);
 			EOR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_EOR_IMM:
+			#if DEBUG_OPCODES
+				printf("EOR_IMM\n");
+			#endif
 			data_addr = addr_IMM_M(cpu);
 			EOR(cpu, memory, data_addr);
 
@@ -3219,25 +3386,40 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// INC
 		//
 		case OPCODE_INC_ABS:
+			#if DEBUG_OPCODES
+				printf("INC_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			INC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_INC_ACC:
+			#if DEBUG_OPCODES
+				printf("INC_ACC\n");
+			#endif
 			INC_A(cpu);
 
 			break;
 		case OPCODE_INC_ABS_IIX:
+			#if DEBUG_OPCODES
+				printf("INC_ABS_IIX\n");
+			#endif
 			data_addr = addr_ABS_IIX(cpu, memory);
 			INC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_INC_DIR:
+			#if DEBUG_OPCODES
+				printf("INC_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			INC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_INC_DIR_IX:
+			#if DEBUG_OPCODES
+				printf("INC_DIR_IX\n");
+			#endif
 			data_addr = addr_DIR_IX(cpu, memory);
 			INC(cpu, memory, data_addr);
 
@@ -3246,6 +3428,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// INX
 		//
 		case OPCODE_INX_IMP:
+			#if DEBUG_OPCODES
+				printf("INX_IMP\n");
+			#endif
 			INX(cpu);
 			
 			break;
@@ -3253,6 +3438,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// INY
 		//
 		case OPCODE_INY_IMP:
+			#if DEBUG_OPCODES
+				printf("INY_IMP\n");
+			#endif
 			INY(cpu);
 			
 			break;
@@ -3260,11 +3448,17 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// JML
 		//
 		case OPCODE_JML_ABS_IL:
+			#if DEBUG_OPCODES
+				printf("JML_ABS_IL\n");
+			#endif
 			data_addr = addr_ABS_IL(cpu, memory);
 			JMP(cpu, data_addr);
 
 			break;
 		case OPCODE_JML_ABS_L:
+			#if DEBUG_OPCODES
+				printf("JML_ABS_L\n");
+			#endif
 			data_addr = addr_ABS_L(cpu, memory);
 			JMP(cpu, data_addr);
 
@@ -3273,16 +3467,25 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// JMP
 		//
 		case OPCODE_JMP_ABS:
+			#if DEBUG_OPCODES
+				printf("JMP_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			JMP(cpu, data_addr);
 
 			break;
 		case OPCODE_JMP_ABS_I:
+			#if DEBUG_OPCODES
+				printf("JMP_ABS_I\n");
+			#endif
 			data_addr = addr_ABS_I(cpu, memory);
 			JMP(cpu, data_addr);
 
 			break;
 		case OPCODE_JMP_ABS_II:
+			#if DEBUG_OPCODES
+				printf("JMP_ABS_II\n");
+			#endif
 			data_addr = addr_ABS_II(cpu, memory);
 			JMP(cpu, data_addr);
 
@@ -3291,6 +3494,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// JSL
 		//
 		case OPCODE_JSL_ABS_L:
+			#if DEBUG_OPCODES
+				printf("JSL_ABS_L\n");
+			#endif
 			data_addr = addr_ABS_L(cpu, memory);
 			JSL(cpu, memory, data_addr);
 
@@ -3299,11 +3505,17 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// JSR
 		//
 		case OPCODE_JSR_ABS:
+			#if DEBUG_OPCODES
+				printf("JSR_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			JSR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_JSR_ABS_II:
+			#if DEBUG_OPCODES
+				printf("JSR_ABS_II\n");
+			#endif
 			data_addr = addr_ABS_II(cpu, memory);
 			JSR(cpu, memory, data_addr);
 
@@ -3312,76 +3524,121 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// LDA
 		//
 		case OPCODE_LDA_ABS:
+			#if DEBUG_OPCODES
+				printf("LDA_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			LDA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDA_ABS_IIX:
+			#if DEBUG_OPCODES
+				printf("LDA_ABS_IIX\n");
+			#endif
 			data_addr = addr_ABS_IIX(cpu, memory);
 			LDA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDA_ABS_IIY:
+			#if DEBUG_OPCODES
+				printf("LDA_ABS_IIY\n");
+			#endif
 			data_addr = addr_ABS_IIY(cpu, memory);
 			LDA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDA_ABS_L:
+			#if DEBUG_OPCODES
+				printf("LDA_ABS_L\n");
+			#endif
 			data_addr = addr_ABS_L(cpu, memory);
 			LDA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDA_ABS_LIX:
+			#if DEBUG_OPCODES
+				printf("LDA_ABS_LIX\n");
+			#endif
 			data_addr = addr_ABS_LIX(cpu, memory);
 			LDA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDA_DIR:
+			#if DEBUG_OPCODES
+				printf("LDA_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			LDA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDA_STK_R:
+			#if DEBUG_OPCODES
+				printf("LDA_STK_R\n");
+			#endif
 			data_addr = addr_STK_R(cpu, memory);
 			LDA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDA_DIR_IX:
+			#if DEBUG_OPCODES
+				printf("LDA_DIR_IX\n");
+			#endif
 			data_addr = addr_DIR_IX(cpu, memory);
 			LDA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDA_DIR_I:
+			#if DEBUG_OPCODES
+				printf("LDA_DIR_I\n");
+			#endif
 			data_addr = addr_DIR_I(cpu, memory);
 			LDA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDA_DIR_IL:
+			#if DEBUG_OPCODES
+				printf("LDA_DIR_IL\n");
+			#endif
 			data_addr = addr_DIR_IL(cpu, memory);
 			LDA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDA_STK_RII:
+			#if DEBUG_OPCODES
+				printf("LDA_STK_RII\n");
+			#endif
 			data_addr = addr_STK_RII(cpu, memory);
 			LDA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDA_DIR_IIX:
+			#if DEBUG_OPCODES
+				printf("LDA_DIR_IIX\n");
+			#endif
 			data_addr = addr_DIR_IIX(cpu, memory);
 			LDA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDA_DIR_IIY:
+			#if DEBUG_OPCODES
+				printf("LDA_DIR_IIY\n");
+			#endif
 			data_addr = addr_DIR_IIY(cpu, memory);
 			LDA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDA_DIR_ILI:
+			#if DEBUG_OPCODES
+				printf("LDA_DIR_ILI\n");
+			#endif
 			data_addr = addr_DIR_ILI(cpu, memory);
 			LDA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDA_IMM:
+			#if DEBUG_OPCODES
+				printf("LDA_IMM\n");
+			#endif
 			data_addr = addr_IMM_M(cpu);
 			LDA(cpu, memory, data_addr);
 
@@ -3390,26 +3647,41 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// LDX
 		//
 		case OPCODE_LDX_ABS:
+			#if DEBUG_OPCODES
+				printf("LDX_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			LDX(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDX_ABS_IIY:
+			#if DEBUG_OPCODES
+				printf("LDX_ABS_IIY\n");
+			#endif
 			data_addr = addr_ABS_IIY(cpu, memory);
 			LDX(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDX_DIR:
+			#if DEBUG_OPCODES
+				printf("LDX_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			LDX(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDX_DIR_IY:
+			#if DEBUG_OPCODES
+				printf("LDX_DIR_IY\n");
+			#endif
 			data_addr = addr_DIR_IY(cpu, memory);
 			LDX(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDX_IMM:
+			#if DEBUG_OPCODES
+				printf("LDX_IMM\n");
+			#endif
 			data_addr = addr_IMM_X(cpu);
 			LDX(cpu, memory, data_addr);
 
@@ -3418,26 +3690,41 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// LDY
 		//
 		case OPCODE_LDY_ABS:
+			#if DEBUG_OPCODES
+				printf("LDY_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			LDY(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDY_ABS_IIX:
+			#if DEBUG_OPCODES
+				printf("LDY_ABS_IIX\n");
+			#endif
 			data_addr = addr_ABS_IIX(cpu, memory);
 			LDY(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDY_DIR:
+			#if DEBUG_OPCODES
+				printf("LDY_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			LDY(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDY_DIR_IX:
+			#if DEBUG_OPCODES
+				printf("LDY_DIR_IX\n");
+			#endif
 			data_addr = addr_DIR_IX(cpu, memory);
 			LDY(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LDY_IMM:
+			#if DEBUG_OPCODES
+				printf("LDY_IMM\n");
+			#endif
 			data_addr = addr_IMM_X(cpu);
 			LDY(cpu, memory, data_addr);
 
@@ -3446,25 +3733,40 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// LSR
 		//
 		case OPCODE_LSR_ABS:
+			#if DEBUG_OPCODES
+				printf("LSR_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			LSR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LSR_ACC:
+			#if DEBUG_OPCODES
+				printf("LSR_ACC\n");
+			#endif
 			LSR_A(cpu);
 
 			break;
 		case OPCODE_LSR_ABS_IIX:
+			#if DEBUG_OPCODES
+				printf("LSR_ABS_IIX\n");
+			#endif
 			data_addr = addr_ABS_IIX(cpu, memory);
 			LSR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LSR_DIR:
+			#if DEBUG_OPCODES
+				printf("LSR_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			LSR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_LSR_DIR_IX:
+			#if DEBUG_OPCODES
+				printf("LSR_DIR_IX\n");
+			#endif
 			data_addr = addr_DIR_IX(cpu, memory);
 			LSR(cpu, memory, data_addr);
 
@@ -3473,6 +3775,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// MVN
 		//
 		case OPCODE_MVN_XYC:
+			#if DEBUG_OPCODES
+				printf("MVN_XYC\n");
+			#endif
 			data_addr = addr_XYC(cpu);
 			MVN(cpu, memory, data_addr);
 
@@ -3481,6 +3786,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// MVP
 		//
 		case OPCODE_MVP_XYC:
+			#if DEBUG_OPCODES
+				printf("MVP_XYC\n");
+			#endif
 			data_addr = addr_XYC(cpu);
 			MVP(cpu, memory, data_addr);
 
@@ -3489,6 +3797,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// NOP
 		//
 		case OPCODE_NOP_IMP:
+			#if DEBUG_OPCODES
+				printf("NOP_IMP\n");
+			#endif
 			NOP();
 
 			break;
@@ -3496,76 +3807,121 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// ORA
 		//
 		case OPCODE_ORA_ABS:
+			#if DEBUG_OPCODES
+				printf("ORA_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			ORA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ORA_ABS_IIX:
+			#if DEBUG_OPCODES
+				printf("ORA_ABS_IIX\n");
+			#endif
 			data_addr = addr_ABS_IIX(cpu, memory);
 			ORA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ORA_ABS_IIY:
+			#if DEBUG_OPCODES
+				printf("ORA_ABS_IIY\n");
+			#endif
 			data_addr = addr_ABS_IIY(cpu, memory);
 			ORA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ORA_ABS_L:
+			#if DEBUG_OPCODES
+				printf("ORA_ABS_L\n");
+			#endif
 			data_addr = addr_ABS_L(cpu, memory);
 			ORA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ORA_ABS_LIX:
+			#if DEBUG_OPCODES
+				printf("ORA_ABS_LIX\n");
+			#endif
 			data_addr = addr_ABS_LIX(cpu, memory);
 			ORA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ORA_DIR:
+			#if DEBUG_OPCODES
+				printf("ORA_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			ORA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ORA_STK_R:
+			#if DEBUG_OPCODES
+				printf("ORA_STK_R\n");
+			#endif
 			data_addr = addr_STK_R(cpu, memory);
 			ORA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ORA_DIR_IX:
+			#if DEBUG_OPCODES
+				printf("ORA_DIR_IX\n");
+			#endif
 			data_addr = addr_DIR_IX(cpu, memory);
 			ORA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ORA_DIR_I:
+			#if DEBUG_OPCODES
+				printf("ORA_DIR_I\n");
+			#endif
 			data_addr = addr_DIR_I(cpu, memory);
 			ORA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ORA_DIR_IL:
+			#if DEBUG_OPCODES
+				printf("ORA_DIR_IL\n");
+			#endif
 			data_addr = addr_DIR_IL(cpu, memory);
 			ORA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ORA_STK_RII:
+			#if DEBUG_OPCODES
+				printf("ORA_STK_RII\n");
+			#endif
 			data_addr = addr_STK_RII(cpu, memory);
 			ORA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ORA_DIR_IIX:
+			#if DEBUG_OPCODES
+				printf("ORA_DIR_IIX\n");
+			#endif
 			data_addr = addr_DIR_IIX(cpu, memory);
 			ORA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ORA_DIR_IIY:
+			#if DEBUG_OPCODES
+				printf("ORA_DIR_IIY\n");
+			#endif
 			data_addr = addr_DIR_IIY(cpu, memory);
 			ORA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ORA_DIR_ILI:
+			#if DEBUG_OPCODES
+				printf("ORA_DIR_ILI\n");
+			#endif
 			data_addr = addr_DIR_ILI(cpu, memory);
 			ORA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ORA_IMM:
+			#if DEBUG_OPCODES
+				printf("ORA_IMM\n");
+			#endif
 			data_addr = addr_IMM_M(cpu);
 			ORA(cpu, memory, data_addr);
 
@@ -3574,6 +3930,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PEA
 		//
 		case OPCODE_PEA_STK:
+			#if DEBUG_OPCODES
+				printf("PEA_STK\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			PEA(cpu, memory, data_addr);
 			
@@ -3582,6 +3941,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PEI
 		//
 		case OPCODE_PEI_STK:
+			#if DEBUG_OPCODES
+				printf("PEI_STK\n");
+			#endif
 			data_addr = addr_DIR_I(cpu, memory);
 			PEI(cpu, memory, data_addr);
 			
@@ -3590,6 +3952,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PER
 		//
 		case OPCODE_PER_STK:
+			#if DEBUG_OPCODES
+				printf("PER_STK\n");
+			#endif
 			data_addr = addr_REL_L(cpu);
 			PEA(cpu, memory, data_addr);
 			
@@ -3598,6 +3963,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PHA
 		//
 		case OPCODE_PHA_STK:
+			#if DEBUG_OPCODES
+				printf("PHA_STK\n");
+			#endif
 			PHA(cpu, memory);
 
 			break;
@@ -3605,6 +3973,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PHB
 		//
 		case OPCODE_PHB_STK:
+			#if DEBUG_OPCODES
+				printf("PHB_STK\n");
+			#endif
 			PHB(cpu, memory);
 
 			break;
@@ -3612,6 +3983,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PHD
 		//
 		case OPCODE_PHD_STK:
+			#if DEBUG_OPCODES
+				printf("PHD_STK\n");
+			#endif
 			PHD(cpu, memory);
 
 			break;
@@ -3619,6 +3993,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PHK
 		//
 		case OPCODE_PHK_STK:
+			#if DEBUG_OPCODES
+				printf("PHK_STK\n");
+			#endif
 			PHK(cpu, memory);
 
 			break;
@@ -3626,6 +4003,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PHP
 		//
 		case OPCODE_PHP_STK:
+			#if DEBUG_OPCODES
+				printf("PHP_STK\n");
+			#endif
 			PHP(cpu, memory);
 
 			break;
@@ -3633,6 +4013,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PHX
 		//
 		case OPCODE_PHX_STK:
+			#if DEBUG_OPCODES
+				printf("PHX_STK\n");
+			#endif
 			PHX(cpu, memory);
 
 			break;
@@ -3640,6 +4023,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PHY
 		//
 		case OPCODE_PHY_STK:
+			#if DEBUG_OPCODES
+				printf("PHY_STK\n");
+			#endif
 			PHY(cpu, memory);
 
 			break;
@@ -3647,6 +4033,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PLA
 		//
 		case OPCODE_PLA_STK:
+			#if DEBUG_OPCODES
+				printf("PLA_STK\n");
+			#endif
 			PLA(cpu, memory);
 
 			break;
@@ -3654,6 +4043,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PLB
 		//
 		case OPCODE_PLB_STK:
+			#if DEBUG_OPCODES
+				printf("PLB_STK\n");
+			#endif
 			PLB(cpu, memory);
 
 			break;
@@ -3661,6 +4053,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PLD
 		//
 		case OPCODE_PLD_STK:
+			#if DEBUG_OPCODES
+				printf("PLD_STK\n");
+			#endif
 			PLD(cpu, memory);
 
 			break;
@@ -3668,6 +4063,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PLP
 		//
 		case OPCODE_PLP_STK:
+			#if DEBUG_OPCODES
+				printf("PLP_STK\n");
+			#endif
 			PLP(cpu, memory);
 
 			break;
@@ -3675,6 +4073,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PLX
 		//
 		case OPCODE_PLX_STK:
+			#if DEBUG_OPCODES
+				printf("PLX_STK\n");
+			#endif
 			PLX(cpu, memory);
 
 			break;
@@ -3682,6 +4083,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// PLY
 		//
 		case OPCODE_PLY_STK:
+			#if DEBUG_OPCODES
+				printf("PLY_STK\n");
+			#endif
 			PLY(cpu, memory);
 
 			break;
@@ -3689,6 +4093,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// REP
 		//
 		case OPCODE_REP_IMM:
+			#if DEBUG_OPCODES
+				printf("REP_IMM\n");
+			#endif
 			data_addr = addr_IMM_8(cpu);
 			REP(cpu, memory, data_addr);
 
@@ -3697,25 +4104,40 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// ROL
 		//
 		case OPCODE_ROL_ABS:
+			#if DEBUG_OPCODES
+				printf("ROL_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			ROL(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ROL_ACC:
+			#if DEBUG_OPCODES
+				printf("ROL_ACC\n");
+			#endif
 			ROL_A(cpu, memory);
 
 			break;
 		case OPCODE_ROL_ABS_IIX:
+			#if DEBUG_OPCODES
+				printf("ROL_ABS_IIX\n");
+			#endif
 			data_addr = addr_ABS_IIX(cpu, memory);
 			ROL(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ROL_DIR:
+			#if DEBUG_OPCODES
+				printf("ROL_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			ROL(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ROL_DIR_IX:
+			#if DEBUG_OPCODES
+				printf("ROL_DIR_IX\n");
+			#endif
 			data_addr = addr_DIR_IX(cpu, memory);
 			ROL(cpu, memory, data_addr);
 
@@ -3724,25 +4146,40 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// ROR
 		//
 		case OPCODE_ROR_ABS:
+			#if DEBUG_OPCODES
+				printf("ROR_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			ROR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ROR_ACC:
+			#if DEBUG_OPCODES
+				printf("ROR_ACC\n");
+			#endif
 			ROR_A(cpu, memory);
 
 			break;
 		case OPCODE_ROR_ABS_IIX:
+			#if DEBUG_OPCODES
+				printf("ROR_ABS_IIX\n");
+			#endif
 			data_addr = addr_ABS_IIX(cpu, memory);
 			ROR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ROR_DIR:
+			#if DEBUG_OPCODES
+				printf("ROR_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			ROR(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_ROR_DIR_IX:
+			#if DEBUG_OPCODES
+				printf("ROR_DIR_IX\n");
+			#endif
 			data_addr = addr_DIR_IX(cpu, memory);
 			ROR(cpu, memory, data_addr);
 
@@ -3751,6 +4188,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// RTI
 		//
 		case OPCODE_RTI_STK:
+			#if DEBUG_OPCODES
+				printf("RTI_STK\n");
+			#endif
 			RTI(cpu, memory);
 
 			break;
@@ -3758,6 +4198,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// RTL
 		//
 		case OPCODE_RTL_STK:
+			#if DEBUG_OPCODES
+				printf("RTL_STK\n");
+			#endif
 			RTL(cpu, memory);
 
 			break;
@@ -3765,6 +4208,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// RTS
 		//
 		case OPCODE_RTS_STK:
+			#if DEBUG_OPCODES
+				printf("RTS_STK\n");
+			#endif
 			RTS(cpu, memory);
 
 			break;
@@ -3772,71 +4218,113 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// SBC
 		//
 		case OPCODE_SBC_ABS:
+			#if DEBUG_OPCODES
+				printf("SBC_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			SBC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_SBC_ABS_IIX:
+			#if DEBUG_OPCODES
+				printf("SBC_ABS_IIX\n");
+			#endif
 			data_addr = addr_ABS_IIX(cpu, memory);
 			SBC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_SBC_ABS_IIY:
+			#if DEBUG_OPCODES
+				printf("SBC_ABS_IIY\n");
+			#endif
 			data_addr = addr_ABS_IIY(cpu, memory);
 			SBC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_SBC_ABS_LIX:
+			#if DEBUG_OPCODES
+				printf("SBC_ABS_LIX\n");
+			#endif
 			data_addr = addr_ABS_LIX(cpu, memory);
 			SBC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_SBC_DIR:
+			#if DEBUG_OPCODES
+				printf("SBC_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			SBC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_SBC_STK_R:
+			#if DEBUG_OPCODES
+				printf("SBC_STK_R\n");
+			#endif
 			data_addr = addr_STK_R(cpu, memory);
 			SBC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_SBC_DIR_IX:
+			#if DEBUG_OPCODES
+				printf("SBC_DIR_IX\n");
+			#endif
 			data_addr = addr_DIR_IX(cpu, memory);
 			SBC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_SBC_DIR_I:
+			#if DEBUG_OPCODES
+				printf("SBC_DIR_I\n");
+			#endif
 			data_addr = addr_DIR_I(cpu, memory);
 			SBC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_SBC_DIR_IL:
+			#if DEBUG_OPCODES
+				printf("SBC_DIR_IL\n");
+			#endif
 			data_addr = addr_DIR_IL(cpu, memory);
 			SBC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_SBC_STK_RII:
+			#if DEBUG_OPCODES
+				printf("SBC_STK_RII\n");
+			#endif
 			data_addr = addr_STK_RII(cpu, memory);
 			SBC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_SBC_DIR_IIX:
+			#if DEBUG_OPCODES
+				printf("SBC_DIR_IIX\n");
+			#endif
 			data_addr = addr_DIR_IIX(cpu, memory);
 			SBC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_SBC_DIR_IIY:
+			#if DEBUG_OPCODES
+				printf("SBC_DIR_IIY\n");
+			#endif
 			data_addr = addr_DIR_IIY(cpu, memory);
 			SBC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_SBC_DIR_ILI:
+			#if DEBUG_OPCODES
+				printf("SBC_DIR_ILI\n");
+			#endif
 			data_addr = addr_DIR_ILI(cpu, memory);
 			SBC(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_SBC_IMM:
+			#if DEBUG_OPCODES
+				printf("SBC_IMM\n");
+			#endif
 			data_addr = addr_IMM_M(cpu);
 			SBC(cpu, memory, data_addr);
 
@@ -3845,6 +4333,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// SEC
 		//
 		case OPCODE_SEC_IMP:
+			#if DEBUG_OPCODES
+				printf("SEC_IMP\n");
+			#endif
 			SEC(cpu);
 
 			break;
@@ -3852,6 +4343,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// SED
 		//
 		case OPCODE_SED_IMP:
+			#if DEBUG_OPCODES
+				printf("SED_IMP\n");
+			#endif
 			SED(cpu);
 
 			break;
@@ -3859,6 +4353,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// SEI
 		//
 		case OPCODE_SEI_IMP:
+			#if DEBUG_OPCODES
+				printf("SEI_IMP\n");
+			#endif
 			SEI(cpu);
 
 			break;
@@ -3866,6 +4363,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// SEP
 		//
 		case OPCODE_SEP_IMM:
+			#if DEBUG_OPCODES
+				printf("SEP_IMM\n");
+			#endif
 			data_addr = addr_IMM_8(cpu);
 			SEP(cpu, memory, data_addr);
 
@@ -3874,66 +4374,105 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// STA
 		//
 		case OPCODE_STA_ABS:
+			#if DEBUG_OPCODES
+				printf("STA_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			STA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STA_ABS_IIX:
+			#if DEBUG_OPCODES
+				printf("STA_ABS_IIX\n");
+			#endif
 			data_addr = addr_ABS_IIX(cpu, memory);
 			STA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STA_ABS_L:
+			#if DEBUG_OPCODES
+				printf("STA_ABS_L\n");
+			#endif
 			data_addr = addr_ABS_L(cpu, memory);
 			STA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STA_ABS_LIX:
+			#if DEBUG_OPCODES
+				printf("STA_ABS_LIX\n");
+			#endif
 			data_addr = addr_ABS_LIX(cpu, memory);
 			STA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STA_DIR:
+			#if DEBUG_OPCODES
+				printf("STA_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			STA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STA_STK_R:
+			#if DEBUG_OPCODES
+				printf("STA_STK_R\n");
+			#endif
 			data_addr = addr_STK_R(cpu, memory);
 			STA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STA_DIR_IX:
+			#if DEBUG_OPCODES
+				printf("STA_DIR_IX\n");
+			#endif
 			data_addr = addr_DIR_IX(cpu, memory);
 			STA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STA_DIR_I:
+			#if DEBUG_OPCODES
+				printf("STA_DIR_I\n");
+			#endif
 			data_addr = addr_DIR_I(cpu, memory);
 			STA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STA_DIR_IL:
+			#if DEBUG_OPCODES
+				printf("STA_DIR_IL\n");
+			#endif
 			data_addr = addr_DIR_IL(cpu, memory);
 			STA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STA_STK_RII:
+			#if DEBUG_OPCODES
+				printf("STA_STK_RII\n");
+			#endif
 			data_addr = addr_STK_RII(cpu, memory);
 			STA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STA_DIR_IIX:
+			#if DEBUG_OPCODES
+				printf("STA_DIR_IIX\n");
+			#endif
 			data_addr = addr_DIR_IIX(cpu, memory);
 			STA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STA_DIR_IIY:
+			#if DEBUG_OPCODES
+				printf("STA_DIR_IIY\n");
+			#endif
 			data_addr = addr_DIR_IIY(cpu, memory);
 			STA(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STA_DIR_ILI:
+			#if DEBUG_OPCODES
+				printf("STA_DIR_ILI\n");
+			#endif
 			data_addr = addr_DIR_ILI(cpu, memory);
 			STA(cpu, memory, data_addr);
 
@@ -3942,6 +4481,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// STP
 		//
 		case OPCODE_STP_IMP:
+			#if DEBUG_OPCODES
+				printf("STP_IMP\n");
+			#endif
 			STP(cpu);
 
 			break;
@@ -3949,16 +4491,25 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// STX
 		//
 		case OPCODE_STX_ABS:
+			#if DEBUG_OPCODES
+				printf("STX_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			STX(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STX_DIR:
+			#if DEBUG_OPCODES
+				printf("STX_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			STX(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STX_DIR_IY:
+			#if DEBUG_OPCODES
+				printf("STX_DIR_IY\n");
+			#endif
 			data_addr = addr_DIR_IY(cpu, memory);
 			STX(cpu, memory, data_addr);
 
@@ -3966,22 +4517,61 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		//
 		// STY
 		//
+		case OPCODE_STY_ABS:
+			#if DEBUG_OPCODES
+				printf("STY_ABS\n");
+			#endif
+			data_addr = addr_ABS(cpu, memory);
+			STY(cpu, memory, data_addr);
+
+			break;
+		case OPCODE_STY_DIR:
+			#if DEBUG_OPCODES
+				printf("STY_DIR\n");
+			#endif
+			data_addr = addr_DIR(cpu, memory);
+			STY(cpu, memory, data_addr);
+
+			break;
+		case OPCODE_STY_DIR_IX:
+			#if DEBUG_OPCODES
+				printf("STY_DIR_IX\n");
+			#endif
+			data_addr = addr_DIR_IX(cpu, memory);
+			STY(cpu, memory, data_addr);
+
+			break;
+		//
+		// STZ
+		//
 		case OPCODE_STZ_ABS:
+			#if DEBUG_OPCODES
+				printf("STZ_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			STZ(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STZ_ABS_IIX:
+			#if DEBUG_OPCODES
+				printf("STZ_ABS_IIX\n");
+			#endif
 			data_addr = addr_ABS_IIX(cpu, memory);
 			STZ(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STZ_DIR:
+			#if DEBUG_OPCODES
+				printf("STZ_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			STZ(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_STZ_DIR_IX:
+			#if DEBUG_OPCODES
+				printf("STZ_DIR_IX\n");
+			#endif
 			data_addr = addr_DIR_IX(cpu, memory);
 			STZ(cpu, memory, data_addr);
 
@@ -3990,6 +4580,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// TAX
 		//
 		case OPCODE_TAX_IMP:
+			#if DEBUG_OPCODES
+				printf("TAX_IMP\n");
+			#endif
 			TAX(cpu);
 
 			break;
@@ -3997,6 +4590,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// TAY
 		//
 		case OPCODE_TAY_IMP:
+			#if DEBUG_OPCODES
+				printf("TAY_IMP\n");
+			#endif
 			TAY(cpu);
 
 			break;
@@ -4004,6 +4600,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// TCD
 		//
 		case OPCODE_TCD_IMP:
+			#if DEBUG_OPCODES
+				printf("TCD_IMP\n");
+			#endif
 			TCD(cpu);
 
 			break;
@@ -4011,6 +4610,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// TCS
 		//
 		case OPCODE_TCS_IMP:
+			#if DEBUG_OPCODES
+				printf("TCS_IMP\n");
+			#endif
 			TCS(cpu);
 
 			break;
@@ -4018,6 +4620,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// TDC
 		//
 		case OPCODE_TDC_IMP:
+			#if DEBUG_OPCODES
+				printf("TDC_IMP\n");
+			#endif
 			TDC(cpu);
 
 			break;
@@ -4025,11 +4630,17 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// TRB
 		//
 		case OPCODE_TRB_ABS:
+			#if DEBUG_OPCODES
+				printf("TRB_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			TRB(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_TRB_DIR:
+			#if DEBUG_OPCODES
+				printf("TRB_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			TRB(cpu, memory, data_addr);
 
@@ -4038,11 +4649,17 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// TSB
 		//
 		case OPCODE_TSB_ABS:
+			#if DEBUG_OPCODES
+				printf("TSB_ABS\n");
+			#endif
 			data_addr = addr_ABS(cpu, memory);
 			TSB(cpu, memory, data_addr);
 
 			break;
 		case OPCODE_TSB_DIR:
+			#if DEBUG_OPCODES
+				printf("TSB_DIR\n");
+			#endif
 			data_addr = addr_DIR(cpu, memory);
 			TSB(cpu, memory, data_addr);
 
@@ -4051,6 +4668,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// TSC
 		//
 		case OPCODE_TSC_IMP:
+			#if DEBUG_OPCODES
+				printf("TSC_IMP\n");
+			#endif
 			TSC(cpu);
 
 			break;
@@ -4058,6 +4678,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// TSX
 		//
 		case OPCODE_TSX_IMP:
+			#if DEBUG_OPCODES
+				printf("TSX_IMP\n");
+			#endif
 			TSX(cpu);
 
 			break;
@@ -4065,6 +4688,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// TXA
 		//
 		case OPCODE_TXA_IMP:
+			#if DEBUG_OPCODES
+				printf("TXA_IMP\n");
+			#endif
 			TXA(cpu);
 
 			break;
@@ -4072,6 +4698,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// TXS
 		//
 		case OPCODE_TXS_IMP:
+			#if DEBUG_OPCODES
+				printf("TXS_IMP\n");
+			#endif
 			TXS(cpu);
 
 			break;
@@ -4079,6 +4708,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// TXY
 		//
 		case OPCODE_TXY_IMP:
+			#if DEBUG_OPCODES
+				printf("TXY_IMP\n");
+			#endif
 			TXY(cpu);
 
 			break;
@@ -4086,6 +4718,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// TYA
 		//
 		case OPCODE_TYA_IMP:
+			#if DEBUG_OPCODES
+				printf("TYA_IMP\n");
+			#endif
 			TYA(cpu);
 
 			break;
@@ -4093,6 +4728,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// TYX
 		//
 		case OPCODE_TYX_IMP:
+			#if DEBUG_OPCODES
+				printf("TYX_IMP\n");
+			#endif
 			TYX(cpu);
 
 			break;
@@ -4100,6 +4738,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// WAI
 		//
 		case OPCODE_WAI_IMP:
+			#if DEBUG_OPCODES
+				printf("WAI_IMP\n");
+			#endif
 			WAI(cpu);
 
 			break;
@@ -4107,6 +4748,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// WDM
 		//
 		case OPCODE_WDM_IMM:
+			#if DEBUG_OPCODES
+				printf("WDM_IMM\n");
+			#endif
 			data_addr = addr_IMM_8(cpu);
 			WDM();
 
@@ -4115,6 +4759,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// XBA
 		//
 		case OPCODE_XBA_IMP:
+			#if DEBUG_OPCODES
+				printf("XBA_IMP\n");
+			#endif
 			XBA(cpu);
 
 			break;
@@ -4122,6 +4769,9 @@ void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
 		// XCE
 		//
 		case OPCODE_XCE_IMP:
+			#if DEBUG_OPCODES
+				printf("XCE_IMP\n");
+			#endif
 			XCE(cpu);
 
 			break;

@@ -26,6 +26,8 @@ void init_memory(struct Memory *memory, uint8_t ROM_type_marker)
 		memory->ROM.ExHiROM.ExROM = malloc(ExHiROM_ExROM_SIZE * sizeof(uint8_t));
 		memory->ROM.ExHiROM.SRAM = malloc(ExHiROM_SRAM_SIZE * sizeof(uint8_t));
 	}
+
+	memory->write_to_ROM = 0;
 }
 
 int is_within_area(uint32_t index, uint8_t bank_0, uint16_t bytes_0, uint8_t bank_1, uint16_t bytes_1)
@@ -187,6 +189,8 @@ void ROM_write(struct Memory *memory, uint32_t addr, uint8_t val)
 	}
 }
 
+uint8_t NMI = 0x42;
+
 uint8_t DB_read(struct Memory *memory, uint32_t addr)
 {
 	uint32_t cartridge_addr = addr;
@@ -218,6 +222,19 @@ uint8_t DB_read(struct Memory *memory, uint32_t addr)
 	}
 	else if(IN_REG(addr))
 	{
+		if(addr == 0x4210)
+		{
+			if(NMI == 0x42)
+			{
+				NMI = 0xc2;
+				return NMI;
+			}
+			else 
+			{
+				NMI = 0x42;
+				return NMI;
+			}
+		}
 		memory->data_bus = memory->REG[REG_indexer(addr)];
 	}
 	else if(IN_REG(mirror_addr)) 
@@ -272,6 +289,8 @@ void DB_write(struct Memory *memory, uint32_t addr, uint8_t write_val)
 	uint8_t mirror_byte = (uint8_t)((addr & 0x00FF0000) >> 16) + 0x80;
 	mirror_addr |= ((0x00000000 | mirror_byte) << 16);
 
+	memory->write_to_ROM = 0;
+
 	if(IN_WRAM(addr))
 	{
 		memory->WRAM[WRAM_indexer(addr)] = write_val;
@@ -296,11 +315,13 @@ void DB_write(struct Memory *memory, uint32_t addr, uint8_t write_val)
 	{
 		if(IN_LoROM_ROM(cartridge_addr))
 		{
-			printf("WRITE TO ROM\n");
+			memory->write_to_ROM = 1;
+			printf("WRITE TO ROM: %06x\n", addr);
 		}
 		else if(IN_LoROM_ROM_MIRROR(cartridge_addr))
 		{
-			printf("WRITE TO ROM\n");
+			memory->write_to_ROM = 1;
+			printf("WRITE TO ROM: %06x\n", addr);
 		}	
 		else if(IN_LoROM_SRAM(cartridge_addr))
 		{

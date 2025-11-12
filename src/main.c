@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -10,50 +11,56 @@ int main()
 {
 	struct Memory memory;
 	init_memory(&memory, LoROM_MARKER);
-	ROM_write(&memory, RESET_VECTOR_6502[0], 0x00);
-	ROM_write(&memory, RESET_VECTOR_6502[1], 0x80);
 
-	uint32_t program_start = 
-		LE_COMBINE_BANK_2BYTE(
-				0x00, 
-				DB_read(&memory, RESET_VECTOR_6502[0]), 
-				DB_read(&memory, RESET_VECTOR_6502[1])
-		);
+	struct stat s;
+	stat("../CPU/CPUADC.sfc", &s);
+	FILE *cart = fopen("../CPU/CPUADC_recompile.sfc", "rb");
+
+	uint8_t *rom = malloc(s.st_size * sizeof(uint8_t));
+	fread(rom, s.st_size, sizeof(uint8_t), cart);
+
+	int byte_height = LoROM_ROM_BYTES[1] - LoROM_ROM_BYTES[0];
+
+	int banks = (int)ceilf((float)s.st_size / (float)byte_height);
+
+
+	printf("%d\n", banks);
+	for(uint8_t i = 0; i < banks; i++)
+	{
+		for(uint16_t j = 0; j < byte_height && ((i * byte_height) + j) < s.st_size; j++)
+		{
+			ROM_write(&memory, LE_COMBINE_BANK_SHORT(i, LoROM_ROM_BYTES[0] + j), rom[(i * byte_height) + j]);
+		}
+	}
+
+	for(int i = 0; i < 21; i++)
+	{
+		printf("%c", DB_read(&memory, 0x00FFC0 + i));
+	}
+
+	printf("\n");
 
 	struct Ricoh_5A22 cpu;
 	reset_ricoh_5a22(&cpu, &memory);
 
-	cpu.cpu_emulation6502 &= ~CPU_STATUS_E;
-	cpu.cpu_status &= ~CPU_STATUS_M;
-	cpu.cpu_status &= ~CPU_STATUS_X;
+	printf("%06x\n", LE_COMBINE_BANK_SHORT(cpu.program_bank, cpu.program_ctr));
 
-	cpu.register_A = 0x0080;
-	cpu.data_bank = 0x7E;
+	int i = 0;
+	while(cpu.RDY && !cpu.LPM && i < 1000000000)
+	{
+		decode_execute(&cpu, &memory);
+		if(memory.write_to_ROM)
+		{
+			uint32_t a = LE_COMBINE_BANK_SHORT(cpu.program_bank, cpu.program_ctr);
+			for(int i = 16; i >= 0; i--)
+			{
+				printf("%02x ", DB_read(&memory, a - i));
+			}
+			printf("%06x\n", a);
+		}
 
-	ROM_write(&memory, program_start, OPCODE_TRB_ABS);
-	ROM_write(&memory, program_start + 1, 0x00);
-	ROM_write(&memory, program_start + 2, 0x00);
-
-	DB_write(&memory, 0x7E0000, 0x10);
-	DB_write(&memory, 0x7E0001, 0x00);
-
-	decode_execute(&cpu, &memory);
-
-	printf("%u\n", cpu.register_A);
-	printf("%04x\n", cpu.register_A);
-
-	uint8_t c = cpu.cpu_status;
-
-	printf("%c", ((c >> 7) & 0b00000001) ? 'N' : 'n');
-	printf("%c", ((c >> 6) & 0b00000001) ? 'V' : 'v');
-	printf("%c", ((c >> 5) & 0b00000001) ? 'M' : 'm');
-	printf("%c", ((c >> 4) & 0b00000001) ? 'X' : 'x');
-	printf("%c", ((c >> 3) & 0b00000001) ? 'D' : 'd');
-	printf("%c", ((c >> 2) & 0b00000001) ? 'I' : 'i');
-	printf("%c", ((c >> 1) & 0b00000001) ? 'Z' : 'z');
-	printf("%c", ((c >> 0) & 0b00000001) ? 'C' : 'c');
-	printf("\n");
+		i++;
+	}
 
 	return 0;
-
 }
