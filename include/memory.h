@@ -151,8 +151,6 @@ struct Memory
 	union ROM_t ROM;
 
 	uint8_t data_bus;
-
-	int write_to_ROM;
 };
 
 void init_memory(struct Memory *memory, uint8_t ROM_type_marker);

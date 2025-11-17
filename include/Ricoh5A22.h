@@ -343,6 +343,7 @@
 #define OPCODE_SBC_ABS 0xED
 #define OPCODE_SBC_ABS_IIX 0xFD
 #define OPCODE_SBC_ABS_IIY 0xF9
+#define OPCODE_SBC_ABS_L 0xEF
 #define OPCODE_SBC_ABS_LIX 0xFF
 #define OPCODE_SBC_DIR 0xE5
 #define OPCODE_SBC_STK_R 0xE3
@@ -365,6 +366,7 @@
 
 #define OPCODE_STA_ABS 0x8D
 #define OPCODE_STA_ABS_IIX 0x9D
+#define OPCODE_STA_ABS_IIY 0x99
 #define OPCODE_STA_ABS_L 0x8F
 #define OPCODE_STA_ABS_LIX 0x9F
 #define OPCODE_STA_DIR 0x85
@@ -456,6 +458,7 @@ struct Ricoh_5A22
 	int IRQ_line;
 };
 
+void print_cpu(struct Ricoh_5A22 *cpu);
 void reset_ricoh_5a22(struct Ricoh_5A22 *cpu, struct Memory *memory);
 void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory);
 
