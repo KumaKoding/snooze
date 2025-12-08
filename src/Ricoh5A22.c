@@ -1,5 +1,4 @@
-#include "Ricoh5A22.h"
-#include "Ricoh5A22.h"
+#include "ricoh5A22.h"
 #include "memory.h"
 
 #include <stdatomic.h>
@@ -7,10 +6,16 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-typedef int bool;
+#define LE_HBYTE16(u16) (uint8_t)((u16 & 0xFF00) >> 8)
+#define LE_LBYTE16(u16) (uint8_t)(u16 & 0x00FF)
 
-#define true 1
-#define false 0
+#define SWP_LE_LBYTE16(u16, u8) ((u16 & 0xFF00) | u8)
+#define SWP_LE_HBYTE16(u16, u8) ((u16 & 0x00FF) | ((0x0000 | u8) << 8))
+
+#define LE_COMBINE_BANK_SHORT(bank, us) (uint32_t)(((((0x00000000 | bank) << 8) | ((us & 0xFF00) >> 8)) << 8) | (us & 0x00FF))
+#define LE_COMBINE_BANK_2BYTE(bank, b1, b2) (uint32_t)(((((0x00000000 | bank) << 8) | b2) << 8) | b1)
+#define LE_COMBINE_2BYTE(b1, b2) (uint16_t)(((0x0000 | b2) << 8) | b1)
+#define LE_COMBINE_3BYTE(b1, b2, b3) (uint32_t)(((((0x00000000 | b3) << 8) | b2) << 8) | b1)
 
 uint8_t check_bit8(uint8_t ps, uint8_t mask)
 {
@@ -2312,16 +2317,21 @@ void XCE(struct Ricoh_5A22 *cpu)
 
 #define DEBUG_OPCODES 1
 
-void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory)
+uint8_t fetch(struct Ricoh_5A22 *cpu, struct Memory *memory)
 {
 	uint32_t opcode_addr = LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr);
 	cpu->program_ctr++;
 
+	return DB_read(memory, opcode_addr);
+}
+
+void execute(struct Ricoh_5A22 *cpu, struct Memory *memory, uint8_t instruction)
+{
 	#if DEBUG_OPCODES
-		printf("%02x ", DB_read(memory, opcode_addr));
+		printf("%02x\n", instruction);
 	#endif
 
-	switch(DB_read(memory, opcode_addr))
+	switch(instruction)
 	{
 		uint32_t data_addr;
 

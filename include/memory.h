@@ -24,7 +24,6 @@
 	MEMORY_AREA(REG_BANKS[0], REG_BYTES[0], \
 				REG_BANKS[1], REG_BYTES[1])
 
-
 // LoROM ADDRESSES
 
 #define LoROM_MARKER 0x20
@@ -154,6 +153,9 @@ struct Memory
 };
 
 void init_memory(struct Memory *memory, uint8_t ROM_type_marker);
+uint8_t mem_read(struct Memory *memory, uint32_t index);
+void mem_write(struct Memory *memory, uint32_t addr, uint8_t write_val);
+
 void ROM_write(struct Memory *memory, uint32_t addr, uint8_t val);
 uint8_t DB_read(struct Memory *memory, uint32_t index);
 void DB_write(struct Memory *memory, uint32_t addr, uint8_t write_val);

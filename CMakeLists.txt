@@ -6,10 +6,13 @@ project(snooze
 add_compile_options(-fsanitize=undefined -Wall -Werror -Iinclude)
 add_link_options(-fsanitize=undefined)
 
-set(SOURCES src/main.c src/Ricoh5A22.c src/memory.c)
-set(HEADERS include/Ricoh5A22.h include/memory.h)
+find_package(SDL3 REQUIRED)
+
+set(SOURCES src/main.c src/ricoh5A22.c src/memory.c src/DMA.c src/cartridge.c)
+set(HEADERS include/ricoh5A22.h include/memory.h include/DMA.h include/cartridge.h)
 
 include_directories(include)
 
-add_executable(sneeze ${SOURCES} ${HEADERS})
-target_include_directories(sneeze PRIVATE ${HEADERS})
+add_executable(snooze ${SOURCES} ${HEADERS})
+target_include_directories(snooze PRIVATE ${HEADERS})
+target_link_libraries(snooze PRIVATE SDL3::SDL3)

@@ -189,7 +189,7 @@ void ROM_write(struct Memory *memory, uint32_t addr, uint8_t val)
 
 uint8_t NMI = 0xc2; // set high by default
 
-uint8_t DB_read(struct Memory *memory, uint32_t addr)
+uint8_t mem_read(struct Memory *memory, uint32_t addr)
 {
 	uint32_t cartridge_addr = addr;
 	uint8_t cartridge_byte = (uint8_t)((addr & 0x00FF0000) >> 16);
@@ -270,7 +270,12 @@ uint8_t DB_read(struct Memory *memory, uint32_t addr)
 	return memory->data_bus; // open bus
 }
 
-void DB_write(struct Memory *memory, uint32_t addr, uint8_t write_val)
+uint8_t DB_read(struct Memory *memory, uint32_t index)
+{
+	return mem_read(memory, index);
+}
+
+void mem_write(struct Memory *memory, uint32_t addr, uint8_t write_val)
 {
 	uint32_t cartridge_addr = addr;
 	uint8_t cartridge_byte = (uint8_t)((addr & 0x00FF0000) >> 16);
@@ -326,5 +331,10 @@ void DB_write(struct Memory *memory, uint32_t addr, uint8_t write_val)
 			memory->ROM.LoROM.SRAM[LoROM_SRAM_mirror_indexer(cartridge_addr)] = write_val;
 		}
 	}
+}
+
+void DB_write(struct Memory *memory, uint32_t index, uint8_t write_val)
+{
+	mem_write(memory, index, write_val);
 }
 

@@ -10,17 +10,6 @@
 #define BUS_A_GENERAL_DMA_ACCESS_SPEED 2.68
 #define CONTROLLER_PORT_ACCESS_SPEED 1.79
 
-#define LE_HBYTE16(u16) (uint8_t)((u16 & 0xFF00) >> 8)
-#define LE_LBYTE16(u16) (uint8_t)(u16 & 0x00FF)
-
-#define SWP_LE_LBYTE16(u16, u8) ((u16 & 0xFF00) | u8)
-#define SWP_LE_HBYTE16(u16, u8) ((u16 & 0x00FF) | ((0x0000 | u8) << 8))
-
-#define LE_COMBINE_BANK_SHORT(bank, us) (uint32_t)(((((0x00000000 | bank) << 8) | ((us & 0xFF00) >> 8)) << 8) | (us & 0x00FF))
-#define LE_COMBINE_BANK_2BYTE(bank, b1, b2) (uint32_t)(((((0x00000000 | bank) << 8) | b2) << 8) | b1)
-#define LE_COMBINE_2BYTE(b1, b2) (uint16_t)(((0x0000 | b2) << 8) | b1)
-#define LE_COMBINE_3BYTE(b1, b2, b3) (uint32_t)(((((0x00000000 | b3) << 8) | b2) << 8) | b1)
-
 #define COP_VECTOR_65816 (uint32_t[]){ 0x0000FFE4, 0x0000FFE5 }
 #define BRK_VECTOR_65816 (uint32_t[]){ 0x0000FFE6, 0x0000FFE7 }
 #define ABORT_VECTOR_65816 (uint32_t[]){ 0x0000FFE8, 0x0000FFE9 }
@@ -460,7 +449,8 @@ struct Ricoh_5A22
 
 void print_cpu(struct Ricoh_5A22 *cpu);
 void reset_ricoh_5a22(struct Ricoh_5A22 *cpu, struct Memory *memory);
-void decode_execute(struct Ricoh_5A22 *cpu, struct Memory *memory);
+uint8_t fetch(struct Ricoh_5A22 *cpu, struct Memory *memory);
+void execute(struct Ricoh_5A22 *cpu, struct Memory *memory, uint8_t instruction);
 
 #endif // RICOH_5A22_H
 
