@@ -83,14 +83,18 @@
 #define WRAM_ADDR_HI 0x002182
 #define WRAM_ADDR_BK 0x002183
 
+#define NMI 0x4210
+
 #define VRAM_WORDS 32 * 1024
-#define OAM_BYTES 128 * 4 
+#define OAM_LTABLE_BYTES 256 * 2
+#define OAM_HTABLE_BYTES 16 * 2 
 #define CGRAM_WORDS 256 * 2
 
 struct PPU_memory
 {
 	uint8_t *VRAM;
-	uint8_t *OAM;
+	uint8_t *OAM_low_table;
+	uint8_t *OAM_high_table;
 	uint8_t *CGRAM;
 };
 
@@ -132,6 +136,7 @@ struct PPU
 	uint8_t name_base_addr;
 	uint16_t OAM_addr; // 15-bit, bit 15 = priority rotation
 	uint8_t OAM_write;
+	uint8_t OAM_latch;
 	uint8_t BG_mode;
 	int BG1_character_size[4]; // 0 -> 8x8, 1 -> 16x16
 	uint8_t mosaic_size;
@@ -160,6 +165,7 @@ struct PPU
 	} VRAM_remap;
 	uint8_t address_increment;
 	uint16_t VRAM_addr;
+	uint8_t VRAM_latch;
 	uint16_t VRAM_write;
 	int tilemap_repeat; // 0 -> repeat, 1 -> no-repeat
 	int non_tilemap_fill; // 0 -> transparent, 1 -> character 0
@@ -181,6 +187,7 @@ struct PPU
 	} M7_matrices;
 	uint8_t CGRAM_addr;
 	uint8_t CGRAM_write;
+	uint8_t CGRAM_latch;
 	struct 
 	{
 		int invert_BGn_window_1[4];
