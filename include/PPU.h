@@ -71,7 +71,7 @@
 #define OAMDATAREAD 0x002138
 #define VMDATALREAD 0x002139
 #define VMDATAHREAD 0x002139
-#define CGRAM_READ 0x00213B
+#define CGDATAREAD 0x00213B
 #define OPHCT 0x213B
 #define OPVCT 0x213D
 #define STAT77 0x213E
@@ -138,7 +138,12 @@ struct PPU
 	uint8_t OAM_write;
 	uint8_t OAM_latch;
 	uint8_t BG_mode;
-	int BG1_character_size[4]; // 0 -> 8x8, 1 -> 16x16
+	int M1_BG3_priority;
+	enum 
+	{
+		CH_SIZE_8x8,
+		CH_SIZE_16x16
+	} BGn_character_size[4]; // 0 -> 8x8, 1 -> 16x16
 	uint8_t mosaic_size;
 	int BGn_mosaic_enable[4];
 	struct
@@ -153,7 +158,18 @@ struct PPU
 		uint16_t BGn_horizontal_offset[4];
 		uint16_t BGn_vertical_offset[4];
 		uint8_t BG_offset_latch;
-		uint8_t BG_horizontal_latch;
+		uint8_t PPU2_horizontal_latch; // I don't know if it's right, but is what made the most sense to me https://forums.nesdev.org/viewtopic.php?p=184522
+									   // In case the server goes down:
+									   //	AWJ: "I'm almost 100% certain that the bits of the BGnHOFS 
+									   //		  registers are actually split between the two chips that 
+									   //		  comprise the S-PPU: the low 3 bits are on PPU2, and the 
+									   //		  rest of the bits are on PPU1."
+									   //	lidnariq: "Oh, that would make the weird bit math much clearer.
+									   // 
+									   //			   It would mean the situation is something more nearly like:
+									   //			   new_coarse_nHOFS = (cur_write<<5) | (PPU1_HVOFS_LATCH>>3)
+									   //			   new_fine_nHOFS = PPU2_nHOFS_LATCH"
+									   // So, in theory, bits 0-2 control fine scroll, and the rest are coarse scroll, but are combined into 1
 	} BG_scroll_offset;	
 	int VRAM_increment_mode; // 0 -> After 2118, 2139, 1 -> After 2119, 213A
 	enum 
@@ -165,7 +181,7 @@ struct PPU
 	} VRAM_remap;
 	uint8_t address_increment;
 	uint16_t VRAM_addr;
-	uint8_t VRAM_latch;
+	uint16_t VRAM_latch;
 	uint16_t VRAM_write;
 	int tilemap_repeat; // 0 -> repeat, 1 -> no-repeat
 	int non_tilemap_fill; // 0 -> transparent, 1 -> character 0
@@ -187,6 +203,7 @@ struct PPU
 	} M7_matrices;
 	uint8_t CGRAM_addr;
 	uint8_t CGRAM_write;
+	uint8_t CGRAM_check;
 	uint8_t CGRAM_latch;
 	struct 
 	{
@@ -226,10 +243,9 @@ struct PPU
 	int backdrop_color_math;
 	int obj_color_math;
 	int BGn_color_math[4];
-	int blue_direct_color_write;
-	int green_direct_color_write;
-	int red_direct_color_write;
-	uint8_t direct_color_write_value;
+	uint8_t fixed_blue;
+	uint8_t fixed_green;
+	uint8_t fixed_red;
 	int external_image_sync;
 	int M7_EXTBG;
 	int high_res;
