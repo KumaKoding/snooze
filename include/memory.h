@@ -2,6 +2,7 @@
 #define MEMORY_H
 
 #include <stdint.h>
+#include "PPU.h"
 
 #define MEMORY_AREA(x_0, y_0, x_1, y_1) (((x_1 + 1) - x_0) * ((y_1 + 1) - y_0))
 #define WITHIN_REGION(i, bank_0, bytes_0, bank_1, bytes_1) \
@@ -159,5 +160,8 @@ void mem_write(struct Memory *memory, uint32_t addr, uint8_t write_val);
 void ROM_write(struct Memory *memory, uint32_t addr, uint8_t val);
 uint8_t DB_read(struct Memory *memory, uint32_t index);
 void DB_write(struct Memory *memory, uint32_t addr, uint8_t write_val);
+
+void write_ppu_register(struct PPU *ppu, struct PPU_memory *ppu_memory, struct Memory *memory, uint32_t addr, uint8_t write_value);
+void read_ppu_register(struct PPU *ppu, struct PPU_memory *ppu_memory, struct Memory *memory, uint32_t addr);
 
 #endif

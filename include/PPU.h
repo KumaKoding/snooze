@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-#define DOTS 256
-#define LINES 239
+#define DOTS 640
+#define LINES 524
 
 #define VRAM_WORD_WIDTH 2
 
@@ -70,9 +70,9 @@
 #define SLHV 0x2137
 #define OAMDATAREAD 0x002138
 #define VMDATALREAD 0x002139
-#define VMDATAHREAD 0x002139
+#define VMDATAHREAD 0x00213A
 #define CGDATAREAD 0x00213B
-#define OPHCT 0x213B
+#define OPHCT 0x213C
 #define OPVCT 0x213D
 #define STAT77 0x213E
 #define STAT78 0x213F
@@ -84,6 +84,7 @@
 #define WRAM_ADDR_BK 0x002183
 
 #define NMI 0x4210
+#define WRIO 0x4201
 
 #define VRAM_WORDS 32 * 1024
 #define OAM_LTABLE_BYTES 256 * 2
@@ -259,6 +260,8 @@ struct PPU
 	uint8_t CGRAM_read;
 	uint16_t vscan_counter; // read twice
 	uint16_t hscan_counter; // read twice
+	uint8_t OPVCT_byte;
+	uint8_t OPHCT_byte;
 	int time_over;
 	int range_over;
 	int pin_25;

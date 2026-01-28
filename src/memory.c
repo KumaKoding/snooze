@@ -187,7 +187,7 @@ void ROM_write(struct Memory *memory, uint32_t addr, uint8_t val)
 	}
 }
 
-uint8_t NMI = 0xc2; // set high by default
+// uint8_t NMI = 0xc2; // set high by default
 
 uint8_t mem_read(struct Memory *memory, uint32_t addr)
 {
@@ -220,20 +220,6 @@ uint8_t mem_read(struct Memory *memory, uint32_t addr)
 	}
 	else if(IN_REG(addr))
 	{
-		if(addr == 0x4210)
-		{
-			if(NMI == 0x42)
-			{
-				NMI = 0xc2;
-				return NMI;
-			}
-			else 
-			{
-				NMI = 0x42;
-				return NMI;
-			}
-		}
-		memory->data_bus = memory->REG[REG_indexer(addr)];
 	}
 	else if(IN_REG(mirror_addr)) 
 	{

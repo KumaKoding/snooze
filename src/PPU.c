@@ -87,8 +87,6 @@ uint16_t read_CGRAM(struct PPU_memory *ppu_memory, uint16_t addr)
 
 // TODO
 //
-// OPHCT
-// OPVCT
 // STAT77
 // STAT78
 
@@ -485,6 +483,38 @@ void write_ppu_register(struct PPU *ppu, struct PPU_memory *ppu_memory, struct M
 	}
 }
 
+void latch_HVCT(struct PPU *ppu)
+{
+	// put in wrio and joypad
+	if(ppu->HV_latch == 0)
+	{
+		ppu->HV_latch = 1;
+
+		ppu->hscan_counter = ppu->x / 2;
+		ppu->vscan_counter = ppu->y / 2;
+	}
+}
+
+void clear_HVCT(struct PPU *ppu)
+{
+	if(ppu->HV_latch == 1)
+	{
+		ppu->HV_latch = 0;
+	}
+}
+
+void ppu1_read(struct PPU *ppu, uint8_t write_value, uint8_t open_bus_bits)
+{
+	ppu->PPU1_bus = ppu->PPU1_bus & open_bus_bits;
+	ppu->PPU1_bus = ppu->PPU1_bus | (write_value  & (~open_bus_bits));
+}
+
+void ppu2_read(struct PPU *ppu, uint8_t write_value, uint8_t open_bus_bits)
+{
+	ppu->PPU2_bus = ppu->PPU2_bus & open_bus_bits;
+	ppu->PPU2_bus = ppu->PPU2_bus | (write_value  & (~open_bus_bits));
+}
+
 void read_ppu_register(struct PPU *ppu, struct PPU_memory *ppu_memory, struct Memory *memory, uint32_t addr)
 {
 	if(addr == OAMDATAREAD)
@@ -530,10 +560,73 @@ void read_ppu_register(struct PPU *ppu, struct PPU_memory *ppu_memory, struct Me
 
 	if(addr == SLHV)
 	{
-		ppu->HV_latch = 1;
+		if(mem_read(memory, WRIO) & 0x80)
+		{
+			latch_HVCT(ppu);
+		}
+	}
 
-		ppu->hscan_counter = ppu->x / 2;
-		ppu->vscan_counter = ppu->y / 2;
+	if(addr == OPHCT)	
+	{
+		if(ppu->OPHCT_byte == 0)
+		{
+			mem_write(memory, addr, LE_LBYTE16(ppu->hscan_counter));
+		}
+		else 
+		{
+			mem_write(memory, addr, LE_HBYTE16(ppu->hscan_counter));
+		}
+
+		ppu->OPHCT_byte = ~ppu->OPHCT_byte;
+	}
+
+	if(addr == OPVCT)	
+	{
+		if(ppu->OPVCT_byte == 0)
+		{
+			mem_write(memory, addr, LE_LBYTE16(ppu->vscan_counter));
+		}
+		else 
+		{
+			mem_write(memory, addr, LE_HBYTE16(ppu->vscan_counter));
+		}
+
+		ppu->OPVCT_byte = ~ppu->OPVCT_byte;
+	}
+
+	if(addr == STAT77)
+	{
+		uint8_t stat = 0x00;
+
+		if(ppu->time_over)
+		{
+			stat |= 0x40;
+		}
+
+		if(ppu->range_over)
+		{
+			stat |= 0x20;
+		}
+
+		if(ppu->pin_25)
+		{
+			stat |= 0x10;
+		}
+
+		stat |= 0b00000111;
+
+		mem_write(memory, addr, stat);
+	}
+}
+
+void write_IO_register(struct PPU *ppu, struct Memory *memory, uint32_t addr, uint8_t write_value)
+{
+	if(addr == WRIO)
+	{
+		if((write_value & 0x80) != (mem_read(memory, addr) & 0x80))
+		{
+			latch_HVCT(ppu);
+		}
 	}
 }
 
@@ -590,6 +683,8 @@ void M0_dot(struct PPU *ppu, struct PPU_memory *ppu_memory, struct Memory *memor
 
 	if(ppu->y >= LINES)
 	{
+		ppu->time_over = 0;
+		ppu->range_over = 0;
 		ppu->y = 0;
 
 		mem_write(memory, NMI, 0x80);
