@@ -85,11 +85,6 @@ uint16_t read_CGRAM(struct PPU_memory *ppu_memory, uint16_t addr)
 	return LE_COMBINE_2BYTE(ppu_memory->CGRAM[addr * 2], ppu_memory->CGRAM[addr * 2 + 1]);
 }
 
-// TODO
-//
-// STAT77
-// STAT78
-
 void write_ppu_register(struct PPU *ppu, struct PPU_memory *ppu_memory, struct Memory *memory, uint32_t addr, uint8_t write_value)
 {
 	if(addr == INIDISP)
@@ -503,57 +498,86 @@ void clear_HVCT(struct PPU *ppu)
 	}
 }
 
-void ppu1_read(struct PPU *ppu, uint8_t write_value, uint8_t open_bus_bits)
-{
-	ppu->PPU1_bus = ppu->PPU1_bus & open_bus_bits;
-	ppu->PPU1_bus = ppu->PPU1_bus | (write_value  & (~open_bus_bits));
-}
-
-void ppu2_read(struct PPU *ppu, uint8_t write_value, uint8_t open_bus_bits)
-{
-	ppu->PPU2_bus = ppu->PPU2_bus & open_bus_bits;
-	ppu->PPU2_bus = ppu->PPU2_bus | (write_value  & (~open_bus_bits));
-}
-
 void read_ppu_register(struct PPU *ppu, struct PPU_memory *ppu_memory, struct Memory *memory, uint32_t addr)
 {
+	if(addr == MPYL) { ppu->PPU1_bus = 0x00; }
+	if(addr == MPYM) { ppu->PPU1_bus = 0x00; }
+	if(addr == MPYH) { ppu->PPU1_bus = 0x00; }
+
 	if(addr == OAMDATAREAD)
 	{
-		mem_write(memory, OAMDATAREAD, read_OAM(ppu_memory, ppu->OAM_addr));
+		uint8_t read = read_OAM(ppu_memory, ppu->OAM_addr);
+		mem_write(memory, OAMDATAREAD, read);
+		ppu->PPU1_bus = read;
 
 		ppu->OAM_addr++;
 	}
 
+	if(addr == OAMDATAREAD) { mem_write(memory, OAMDATAREAD, ppu->PPU1_bus); }
+	if(addr == BGMODE) { mem_write(memory, BGMODE, ppu->PPU1_bus); }
+	if(addr == MOSAIC) { mem_write(memory, MOSAIC, ppu->PPU1_bus); }
+	if(addr == BG2SC) { mem_write(memory, BG2SC, ppu->PPU1_bus); }
+	if(addr == BG3SC) { mem_write(memory, BG3SC, ppu->PPU1_bus); }
+	if(addr == BG4SC) { mem_write(memory, BG4SC, ppu->PPU1_bus); }
+
+	if(addr == BG4VOFS) { mem_write(memory, BG4VOFS, ppu->PPU1_bus); }
+	if(addr == VMAIN) { mem_write(memory, VMAIN, ppu->PPU1_bus); }
+	if(addr == VMADDL) { mem_write(memory, VMADDL, ppu->PPU1_bus); }
+	if(addr == VMDATAL) { mem_write(memory, VMDATAL, ppu->PPU1_bus); }
+	if(addr == VMDATAH) { mem_write(memory, VMDATAH, ppu->PPU1_bus); }
+	if(addr == M7SEL) { mem_write(memory, M7SEL, ppu->PPU1_bus); }
+
+	if(addr == W34SEL) { mem_write(memory, W34SEL, ppu->PPU1_bus); }
+	if(addr == WOBJSEL) { mem_write(memory, WOBJSEL, ppu->PPU1_bus); }
+	if(addr == WH0) { mem_write(memory, WH0, ppu->PPU1_bus); }
+	if(addr == WH2) { mem_write(memory, WH2, ppu->PPU1_bus); }
+	if(addr == WH3) { mem_write(memory, WH3, ppu->PPU1_bus); }
+	if(addr == WBGLOG) { mem_write(memory, WBGLOG, ppu->PPU1_bus); }
+
 	if(addr == VMDATALREAD)
 	{
-		mem_write(memory, VMDATALREAD, LE_LBYTE16(ppu->VRAM_latch));
+		uint8_t read = LE_LBYTE16(ppu->VRAM_latch);
+		mem_write(memory, VMDATALREAD, read);
+		ppu->PPU1_bus = read;
 
 		if(ppu->VRAM_increment_mode == 0)
 		{
+			ppu->VRAM_latch = read_VRAM(ppu_memory, ppu->VRAM_addr);
 			ppu->VRAM_addr++;
 		}
 	}
 
 	if(addr == VMDATAHREAD)
 	{
-		mem_write(memory, VMDATAHREAD, LE_HBYTE16(ppu->VRAM_latch));
+		uint8_t read = LE_HBYTE16(ppu->VRAM_latch);
+		mem_write(memory, VMDATALREAD, read);
+		ppu->PPU1_bus = read;
 
 		if(ppu->VRAM_increment_mode == 1)
 		{
+			ppu->VRAM_latch = read_VRAM(ppu_memory, ppu->VRAM_addr);
 			ppu->VRAM_addr++;
 		}
 	}
 
 	if(addr == CGDATAREAD)
 	{
+
 		if(ppu->CGRAM_check)
 		{
-			mem_write(memory, CGDATAREAD, LE_HBYTE16(read_CGRAM(ppu_memory, ppu->CGRAM_addr)));
+			uint8_t read =  LE_HBYTE16(read_CGRAM(ppu_memory, ppu->CGRAM_addr));
+			read = (read & (~0x80)) | (ppu->PPU2_bus & 0x80);
+			mem_write(memory, CGDATAREAD, read);
+			ppu->PPU2_bus = read;
+
 			ppu->CGRAM_check = 0;
 		}
 		else
 		{
-			mem_write(memory, CGDATAREAD, LE_LBYTE16(read_CGRAM(ppu_memory, ppu->CGRAM_addr)));
+			uint8_t read =  LE_LBYTE16(read_CGRAM(ppu_memory, ppu->CGRAM_addr));
+			mem_write(memory, CGDATAREAD, read);
+			ppu->PPU2_bus = read;
+
 			ppu->CGRAM_check = 1;
 		}
 	}
@@ -570,11 +594,16 @@ void read_ppu_register(struct PPU *ppu, struct PPU_memory *ppu_memory, struct Me
 	{
 		if(ppu->OPHCT_byte == 0)
 		{
-			mem_write(memory, addr, LE_LBYTE16(ppu->hscan_counter));
+			uint8_t read = LE_LBYTE16(ppu->hscan_counter);
+			mem_write(memory, addr, read);
+			ppu->PPU2_bus = read;
 		}
 		else 
 		{
-			mem_write(memory, addr, LE_HBYTE16(ppu->hscan_counter));
+			uint8_t read = LE_HBYTE16(ppu->hscan_counter);
+			read = (read & 0x01) | (ppu->PPU2_bus & (~0x01));
+			mem_write(memory, addr, read);
+			ppu->PPU2_bus = read;
 		}
 
 		ppu->OPHCT_byte = ~ppu->OPHCT_byte;
@@ -584,11 +613,16 @@ void read_ppu_register(struct PPU *ppu, struct PPU_memory *ppu_memory, struct Me
 	{
 		if(ppu->OPVCT_byte == 0)
 		{
-			mem_write(memory, addr, LE_LBYTE16(ppu->vscan_counter));
+			uint8_t read = LE_LBYTE16(ppu->vscan_counter);
+			mem_write(memory, addr, read);
+			ppu->PPU2_bus = read;
 		}
 		else 
 		{
-			mem_write(memory, addr, LE_HBYTE16(ppu->vscan_counter));
+			uint8_t read = LE_HBYTE16(ppu->vscan_counter);
+			read = (read & 0x01) | (ppu->PPU2_bus & (~0x01));
+			mem_write(memory, addr, read);
+			ppu->PPU2_bus = read;
 		}
 
 		ppu->OPVCT_byte = ~ppu->OPVCT_byte;
@@ -600,22 +634,60 @@ void read_ppu_register(struct PPU *ppu, struct PPU_memory *ppu_memory, struct Me
 
 		if(ppu->time_over)
 		{
-			stat |= 0x40;
+			stat |= 0x80;
 		}
 
 		if(ppu->range_over)
 		{
-			stat |= 0x20;
+			stat |= 0x40;
 		}
 
 		if(ppu->pin_25)
 		{
+			stat |= 0x20;
+		}
+
+		stat |= ppu->PPU1_bus & 0x10;
+		stat |= ppu->PPU1_version & 0b00001111;
+
+		mem_write(memory, addr, stat);
+		ppu->PPU1_bus = stat;
+	}
+
+	if(addr == STAT78)
+	{
+		uint8_t stat = 0x00;
+
+		ppu->OPHCT_byte = 0;
+		ppu->OPVCT_byte = 0;
+		if(mem_read(memory, WRIO) & 0x80)
+		{
+			ppu->counter_latch = 0;
+		}
+
+		if(ppu->interlace_field)
+		{
+			stat |= 0x80;
+		}
+
+		if(ppu->counter_latch)
+		{
+			stat |= 0x40;
+		}
+
+		stat |= ppu->PPU2_bus & 0x20;
+
+		if(ppu->frame_rate)
+		{
+			// 0 -> 60hz, 1 -> 50hz
+			// will always be 60hz because in NTSC mode (525 lines)
 			stat |= 0x10;
 		}
 
-		stat |= 0b00000111;
+		stat |= ppu->PPU2_version & 0b00001111;
 
 		mem_write(memory, addr, stat);
+		ppu->PPU2_bus = stat;
 	}
 }
 
@@ -685,6 +757,7 @@ void M0_dot(struct PPU *ppu, struct PPU_memory *ppu_memory, struct Memory *memor
 	{
 		ppu->time_over = 0;
 		ppu->range_over = 0;
+		ppu->interlace_field = ~ppu->interlace_field;
 		ppu->y = 0;
 
 		mem_write(memory, NMI, 0x80);

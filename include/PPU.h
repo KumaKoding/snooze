@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #define DOTS 640
-#define LINES 524
+#define LINES 525
 
 #define VRAM_WORD_WIDTH 2
 

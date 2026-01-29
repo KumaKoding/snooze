@@ -1,0 +1,13 @@
+#ifndef REGISTERS_H
+#define REGISTERS_H
+
+#define WRAM_WRITE 0x002180
+#define WRAM_READ 0x002180
+#define WRAM_ADDR_LO 0x002181
+#define WRAM_ADDR_HI 0x002182
+#define WRAM_ADDR_BK 0x002183
+
+#define NMI 0x4210
+#define WRIO 0x4201
+
+#endif // REGISTERS_H
