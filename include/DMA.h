@@ -68,9 +68,9 @@ struct DMA
 #define HDMA_REPEAT_SCANLINE_CTR 0x430A
 #define UNUSED_BYTES (uint16_t[]){ 0x430B, 0x430F }
 
-void init_DMA(struct Memory *memory);
-void populate_MDMA(struct DMA *dma, struct Memory *memory);
-void populate_HDMA(struct DMA *dma, struct Memory *memory);
+void init_DMA(struct data_bus *data_bus);
+void populate_MDMA(struct data_bus *data_bus);
+void populate_HDMA(struct data_bus *data_bus);
 void begin_DMA(struct Memory *memory);
 
 #endif // DMA_H

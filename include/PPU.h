@@ -1,6 +1,7 @@
 #ifndef PPU_H
 #define PPU_H
 
+#include "memory.h"
 #include <stdint.h>
 
 #define DOTS 640
@@ -10,86 +11,10 @@
 
 #define M0_BACKGROUNDS 4
 
-#define INIDISP 0x2100
-#define OBJSEL 0x2101
-#define OAMADDL 0x2102
-#define OAMADDH 0x2103
-#define OAMDATA 0x2104
-#define BGMODE 0x2105
-#define MOSAIC 0x2106
-#define BG1SC 0x2107
-#define BG2SC 0x2108
-#define BG3SC 0x2109
-#define BG4SC 0x210A
-#define BG12NBA 0x210B
-#define BG34NBA 0x210C
-#define BG1HOFS 0x210D
-#define M7HOFS 0x210D
-#define BG1VOFS 0x210E
-#define M7VOFS 0x210E
-#define BG2HOFS 0x210F
-#define BG2VOFS 0x2110
-#define BG3HOFS 0x2111
-#define BG3VOFS 0x2112
-#define BG4HOFS 0x2113
-#define BG4VOFS 0x2114
-#define VMAIN 0x2115
-#define VMADDL 0x002116
-#define VMADDH 0x002117
-#define VMDATAL 0x002118
-#define VMDATAH 0x002119
-#define M7SEL 0x211A
-#define M7A 0x211B
-#define M7B 0x211C
-#define M7C 0x211D
-#define M7D 0x211E
-#define M7X 0x211F
-#define M7Y 0x2120
-#define CGADD 0x002121
-#define CGDATA 0x002122
-#define W12SEL 0x2123
-#define W34SEL 0x2124
-#define WOBJSEL 0x2125
-#define WH0 0x2126
-#define WH1 0x2127
-#define WH2 0x2128
-#define WH3 0x2129
-#define WBGLOG 0x212A
-#define WOBJLOG 0x212B
-#define TM 0x212C
-#define TS 0x212D
-#define TMW 0x212E
-#define TSW 0x212F
-#define CGWSEL 0x2130
-#define CGADSUB 0x2131
-#define COLDATA 0x2132
-#define SETINI 0x2133
-#define MPYL 0x2134
-#define MPYM 0x2135
-#define MPYH 0x2136
-#define SLHV 0x2137
-#define OAMDATAREAD 0x002138
-#define VMDATALREAD 0x002139
-#define VMDATAHREAD 0x00213A
-#define CGDATAREAD 0x00213B
-#define OPHCT 0x213C
-#define OPVCT 0x213D
-#define STAT77 0x213E
-#define STAT78 0x213F
-
-#define WRAM_WRITE 0x002180
-#define WRAM_READ 0x002180
-#define WRAM_ADDR_LO 0x002181
-#define WRAM_ADDR_HI 0x002182
-#define WRAM_ADDR_BK 0x002183
-
-#define NMI 0x4210
-#define WRIO 0x4201
-
 #define VRAM_WORDS 32 * 1024
-#define OAM_LTABLE_BYTES 256 * 2
-#define OAM_HTABLE_BYTES 16 * 2 
-#define CGRAM_WORDS 256 * 2
+#define OAM_LTABLE_BYTES 512 
+#define OAM_HTABLE_BYTES 32
+#define CGRAM_WORDS 256
 
 struct PPU_memory
 {
@@ -97,6 +22,12 @@ struct PPU_memory
 	uint8_t *OAM_low_table;
 	uint8_t *OAM_high_table;
 	uint8_t *CGRAM;
+};
+
+struct S_PPU
+{
+	struct PPU *ppu;
+	struct PPU_memory *memory;
 };
 
 enum sprite_sizes
@@ -112,10 +43,10 @@ enum sprite_sizes
 
 enum window_mask
 {
-	OR,
-	AND,
-	XOR,
-	XNOR
+	OR_mask,
+	AND_mask,
+	XOR_mask,
+	XNOR_mask
 };
 
 enum window_regions
@@ -277,7 +208,12 @@ struct PPU
 	uint8_t PPU2_bus;
 
 	int x, y;
+	int elapsed_cycles;
+	int queued_cycles;
 };
+
+void init_s_ppu(struct S_PPU *s_ppu);
+void ppu_dot(struct data_bus *data_bus);
 
 #endif // PPU_H
 

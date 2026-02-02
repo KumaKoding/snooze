@@ -164,7 +164,7 @@ uint32_t LoROM_SRAM_mirror_indexer(uint32_t index)
 	return new_index;
 }
 
-void ROM_write(struct Memory *memory, uint32_t addr, uint8_t val)
+void ROM_write(struct data_bus *data_bus, uint32_t addr, uint8_t val)
 {
 	uint32_t cartridge_addr = addr;
 	uint8_t cartridge_byte = (uint8_t)((addr & 0x00FF0000) >> 16);
@@ -179,17 +179,17 @@ void ROM_write(struct Memory *memory, uint32_t addr, uint8_t val)
 
 	if(IN_LoROM_ROM(cartridge_addr))
 	{
-		memory->ROM.LoROM.ROM[LoROM_ROM_indexer(cartridge_addr)] = val;
+		data_bus->A_Bus.memory->ROM.LoROM.ROM[LoROM_ROM_indexer(cartridge_addr)] = val;
 	}
 	else if(IN_LoROM_ROM_MIRROR(cartridge_addr))
 	{
-		memory->ROM.LoROM.ROM[LoROM_ROM_mirror_indexer(cartridge_addr)] = val;
+		data_bus->A_Bus.memory->ROM.LoROM.ROM[LoROM_ROM_mirror_indexer(cartridge_addr)] = val;
 	}
 }
 
 // uint8_t NMI = 0xc2; // set high by default
 
-uint8_t mem_read(struct Memory *memory, uint32_t addr)
+uint8_t mem_read(struct data_bus *data_bus, uint32_t addr)
 {
 	uint32_t cartridge_addr = addr;
 	uint8_t cartridge_byte = (uint8_t)((addr & 0x00FF0000) >> 16);
@@ -208,40 +208,41 @@ uint8_t mem_read(struct Memory *memory, uint32_t addr)
 
 	if(IN_WRAM(addr))
 	{
-		memory->data_bus = memory->WRAM[WRAM_indexer(addr)];
+		data_bus->open_value = data_bus->A_Bus.memory->WRAM[WRAM_indexer(addr)];
 	}
 	else if(IN_WRAM_LOWRAM_MIRROR(addr))
 	{
-		memory->data_bus = memory->WRAM[WRAM_lowRAM_mirror_indexer(addr)];
+		data_bus->open_value = data_bus->A_Bus.memory->WRAM[WRAM_lowRAM_mirror_indexer(addr)];
 	}
 	else if(IN_WRAM_LOWRAM_MIRROR(mirror_addr))
 	{
-		memory->data_bus = memory->WRAM[WRAM_lowRAM_mirror_indexer(mirror_addr)];
+		data_bus->open_value = data_bus->A_Bus.memory->WRAM[WRAM_lowRAM_mirror_indexer(mirror_addr)];
 	}
 	else if(IN_REG(addr))
 	{
+		read_ppu_register(data_bus, addr);
 	}
 	else if(IN_REG(mirror_addr)) 
 	{
-		memory->data_bus = memory->REG[REG_indexer(mirror_addr)];
+		data_bus->open_value = data_bus->A_Bus.memory->REG[REG_indexer(mirror_addr)];
 	}
-	else if(memory->ROM_type_marker == LoROM_MARKER)
+	else if(data_bus->A_Bus.memory->ROM_type_marker == LoROM_MARKER)
 	{
 		if(IN_LoROM_ROM(cartridge_addr))
 		{
-			memory->data_bus = memory->ROM.LoROM.ROM[LoROM_ROM_indexer(cartridge_addr)];
+			data_bus->open_value = data_bus->A_Bus.memory->ROM.LoROM.ROM[LoROM_ROM_indexer(cartridge_addr)];
 		}
 		else if(IN_LoROM_ROM_MIRROR(cartridge_addr))
 		{
-			memory->data_bus = memory->ROM.LoROM.ROM[LoROM_ROM_mirror_indexer(cartridge_addr)];
+			data_bus->open_value = data_bus->A_Bus.memory->ROM.LoROM.ROM[LoROM_ROM_mirror_indexer(cartridge_addr)];
 		}	
 		else if(IN_LoROM_SRAM(cartridge_addr))
 		{
-			memory->data_bus = memory->ROM.LoROM.SRAM[LoROM_SRAM_indexer(cartridge_addr)];
+			data_bus->open_value = data_bus->A_Bus.memory->ROM.LoROM.SRAM[LoROM_SRAM_indexer(cartridge_addr)];
 		}
 		else if(IN_LoROM_SRAM_MIRROR(cartridge_addr))
 		{
-			memory->data_bus = memory->ROM.LoROM.SRAM[LoROM_SRAM_mirror_indexer(cartridge_addr)];
+			data_bus->open_value = data_bus->A_Bus.memory->ROM.LoROM.SRAM[LoROM_SRAM_mirror_indexer(cartridge_addr)];
 		}
 		else 
 		{
@@ -253,15 +254,10 @@ uint8_t mem_read(struct Memory *memory, uint32_t addr)
 		printf("UNKNOWN\n");
 	}
 
-	return memory->data_bus; // open bus
+	return data_bus->open_value; // open bus
 }
 
-uint8_t DB_read(struct Memory *memory, uint32_t index)
-{
-	return mem_read(memory, index);
-}
-
-void mem_write(struct Memory *memory, uint32_t addr, uint8_t write_val)
+void mem_write(struct data_bus *data_bus, uint32_t addr, uint8_t write_val)
 {
 	uint32_t cartridge_addr = addr;
 	uint8_t cartridge_byte = (uint8_t)((addr & 0x00FF0000) >> 16);
@@ -280,25 +276,26 @@ void mem_write(struct Memory *memory, uint32_t addr, uint8_t write_val)
 
 	if(IN_WRAM(addr))
 	{
-		memory->WRAM[WRAM_indexer(addr)] = write_val;
+		data_bus->A_Bus.memory->WRAM[WRAM_indexer(addr)] = write_val;
 	}
 	else if(IN_WRAM_LOWRAM_MIRROR(addr))
 	{
-		memory->WRAM[WRAM_lowRAM_mirror_indexer(addr)] = write_val;
+		data_bus->A_Bus.memory->WRAM[WRAM_lowRAM_mirror_indexer(addr)] = write_val;
 	}
 	else if(IN_WRAM_LOWRAM_MIRROR(mirror_addr))
 	{
-		memory->WRAM[WRAM_lowRAM_mirror_indexer(mirror_addr)] = write_val;
+		data_bus->A_Bus.memory->WRAM[WRAM_lowRAM_mirror_indexer(mirror_addr)] = write_val;
 	}
 	else if(IN_REG(addr))
 	{
-		memory->REG[REG_indexer(addr)] = write_val;
+		write_ppu_register(data_bus, addr, write_val);
+		data_bus->A_Bus.memory->REG[REG_indexer(addr)] = write_val;
 	}
 	else if(IN_REG(mirror_addr)) 
 	{
-		memory->REG[REG_indexer(mirror_addr)] = write_val;
+		data_bus->A_Bus.memory->REG[REG_indexer(mirror_addr)] = write_val;
 	}
-	else if(memory->ROM_type_marker == LoROM_MARKER)
+	else if(data_bus->A_Bus.memory->ROM_type_marker == LoROM_MARKER)
 	{
 		if(IN_LoROM_ROM(cartridge_addr))
 		{
@@ -310,17 +307,12 @@ void mem_write(struct Memory *memory, uint32_t addr, uint8_t write_val)
 		}	
 		else if(IN_LoROM_SRAM(cartridge_addr))
 		{
-			memory->ROM.LoROM.SRAM[LoROM_SRAM_indexer(cartridge_addr)] = write_val;
+			data_bus->A_Bus.memory->ROM.LoROM.SRAM[LoROM_SRAM_indexer(cartridge_addr)] = write_val;
 		}
 		else if(IN_LoROM_SRAM_MIRROR(cartridge_addr))
 		{
-			memory->ROM.LoROM.SRAM[LoROM_SRAM_mirror_indexer(cartridge_addr)] = write_val;
+			data_bus->A_Bus.memory->ROM.LoROM.SRAM[LoROM_SRAM_mirror_indexer(cartridge_addr)] = write_val;
 		}
 	}
-}
-
-void DB_write(struct Memory *memory, uint32_t index, uint8_t write_val)
-{
-	mem_write(memory, index, write_val);
 }
 

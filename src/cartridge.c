@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <sys/stat.h>
 
-void load_ROM(const char *filename, struct Memory *memory)
+void load_ROM(const char *filename, struct data_bus *data_bus)
 {
 	struct stat ROM_info;
 	stat(filename, &ROM_info); 
@@ -31,7 +31,7 @@ void load_ROM(const char *filename, struct Memory *memory)
 		{
 			uint32_t A_addr = ((0x00000000 | b) << 16) | addr;
 
-			ROM_write(memory, A_addr, rom[n_bytes]);
+			ROM_write(data_bus, A_addr, rom[n_bytes]);
 			n_bytes++;
 
 			printf("%u\n", n_bytes);
@@ -42,7 +42,7 @@ void load_ROM(const char *filename, struct Memory *memory)
 
 	for(int i = 0; i < 21; i++)
 	{
-		printf("%c", DB_read(memory, 0x00FFC0 + i));
+		printf("%c", DB_read(data_bus, 0x00FFC0 + i));
 	}
 
 	printf("\n");

@@ -440,6 +440,8 @@ struct Ricoh_5A22
 	uint8_t cpu_emulation6502;
 	uint8_t cpu_status;
 
+	int queued_cyles;
+
 	int LPM;
 	int RDY;
 
@@ -448,9 +450,13 @@ struct Ricoh_5A22
 };
 
 void print_cpu(struct Ricoh_5A22 *cpu);
-void reset_ricoh_5a22(struct Ricoh_5A22 *cpu, struct Memory *memory);
-uint8_t fetch(struct Ricoh_5A22 *cpu, struct Memory *memory);
-void execute(struct Ricoh_5A22 *cpu, struct Memory *memory, uint8_t instruction);
+void reset_ricoh_5a22(struct data_bus *data_bus);
+uint8_t fetch(struct data_bus *data_bus);
+void execute(struct data_bus *data_bus, uint8_t instruction);
+
+void hw_nmi(struct data_bus *data_bus);
+void hw_reset(struct data_bus *data_bus);
+void hw_irq(struct data_bus *data_bus);
 
 #endif // RICOH_5A22_H
 

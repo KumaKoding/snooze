@@ -8,8 +8,8 @@ add_link_options(-fsanitize=undefined)
 
 find_package(SDL3 REQUIRED)
 
-set(SOURCES src/main.c src/ricoh5A22.c src/memory.c src/DMA.c src/cartridge.c)
-set(HEADERS include/ricoh5A22.h include/memory.h include/DMA.h include/cartridge.h)
+set(SOURCES src/main.c src/ricoh5A22.c src/memory.c src/cpu_io.c src/ppu_registers.c src/DMA.c src/cartridge.c src/ppu.c)
+set(HEADERS include/ricoh5A22.h include/memory.h include/DMA.h include/cartridge.h include/registers.h include/PPU.h)
 
 include_directories(include)
 

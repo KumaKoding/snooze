@@ -2,7 +2,6 @@
 #define MEMORY_H
 
 #include <stdint.h>
-#include "PPU.h"
 
 #define MEMORY_AREA(x_0, y_0, x_1, y_1) (((x_1 + 1) - x_0) * ((y_1 + 1) - y_0))
 #define WITHIN_REGION(i, bank_0, bytes_0, bank_1, bytes_1) \
@@ -149,19 +148,47 @@ struct Memory
 
 	uint8_t ROM_type_marker;
 	union ROM_t ROM;
+};
 
-	uint8_t data_bus;
+struct Ricoh_5A22;
+struct PPU;
+struct DMA;
+
+struct data_bus
+{
+	struct 
+	{
+		struct S_PPU *ppu;
+		struct DMA *dma;
+	} B_bus;
+
+	struct 
+	{
+		struct Ricoh_5A22 *cpu;
+		struct Memory *memory;
+	} A_Bus;
+
+	uint8_t open_value;
 };
 
 void init_memory(struct Memory *memory, uint8_t ROM_type_marker);
-uint8_t mem_read(struct Memory *memory, uint32_t index);
-void mem_write(struct Memory *memory, uint32_t addr, uint8_t write_val);
 
-void ROM_write(struct Memory *memory, uint32_t addr, uint8_t val);
-uint8_t DB_read(struct Memory *memory, uint32_t index);
-void DB_write(struct Memory *memory, uint32_t addr, uint8_t write_val);
+uint8_t DB_read(struct data_bus *data_bus, uint32_t addr);
+uint8_t mem_read(struct data_bus *data_bus, uint32_t addr);
 
-void write_ppu_register(struct PPU *ppu, struct PPU_memory *ppu_memory, struct Memory *memory, uint32_t addr, uint8_t write_value);
-void read_ppu_register(struct PPU *ppu, struct PPU_memory *ppu_memory, struct Memory *memory, uint32_t addr);
+void ROM_write(struct data_bus *data_bus, uint32_t addr, uint8_t val);
+void DB_write(struct data_bus *data_bus, uint32_t index, uint8_t write_val);
+void mem_write(struct data_bus *data_bus, uint32_t index, uint8_t write_val);
+
+void read_ppu_register(struct data_bus *data_bus, uint32_t addr);
+void write_ppu_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_value);
+uint16_t read_VRAM(struct data_bus *data_bus, uint16_t addr);
+void write_VRAM_word(struct data_bus *data_bus, uint16_t addr, uint16_t word);
+void write_VRAM_low(struct data_bus *data_bus, uint16_t addr, uint8_t byte);
+void write_VRAM_high(struct data_bus *data_bus, uint16_t addr, uint8_t byte);
+uint8_t read_OAM(struct data_bus *data_bus, uint16_t addr);
+void write_OAM(struct data_bus *data_bus, uint16_t addr, uint8_t byte);
+void write_CGRAM_word(struct data_bus *data_bus, uint16_t addr, uint16_t word);
+uint16_t read_CGRAM(struct data_bus *data_bus, uint16_t addr);
 
 #endif

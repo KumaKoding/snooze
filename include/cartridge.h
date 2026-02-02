@@ -3,6 +3,6 @@
 
 #include "memory.h"
 
-void load_ROM(const char *filename, struct Memory *memory);
+void load_ROM(const char *filename, struct data_bus *data_bus);
 
 #endif // CARTRIDGE_H
