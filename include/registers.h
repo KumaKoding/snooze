@@ -68,13 +68,55 @@
 #define STAT77 0x213E
 #define STAT78 0x213F
 
-#define WRAM_WRITE 0x002180
-#define WRAM_READ 0x002180
-#define WRAM_ADDR_LO 0x002181
-#define WRAM_ADDR_HI 0x002182
-#define WRAM_ADDR_BK 0x002183
+#define WMDATA 0x002180
+#define WMADDL 0x002181
+#define WMADDM 0x002182
+#define WMADDH 0x002183
 
-#define NMI 0x4210
+#define NMITIEN 0x4200
 #define WRIO 0x4201
+#define WRMPYA 0x4202
+#define WRMPYB 0x4203
+#define WRDIVL 0x4204
+#define WRDIVH 0x4205
+#define WRDIVB 0x4206
+#define HTIMEL 0x4207
+#define HTIMEH 0x4208
+#define VTIMEL 0x4209
+#define VTIMEH 0x420A
+#define MDMAEN 0x420B
+#define HDMAEN 0x420C
+#define MEMSEL 0x420D
+#define RDNMI 0x4210
+#define TIMEUP 0x4211
+#define HVBJOY 0x4212
+#define RDIO 0x4213
+#define RDDIVL 0x4214
+#define RDDIVH 0x4215
+#define RDMPYL 0x4216
+#define RDMPYH 0x4217
+#define JOY1L 0x4218
+#define JOY1H 0x4219
+#define JOY2L 0x421A
+#define JOY2H 0x421B
+#define JOY3L 0x421C
+#define JOY3H 0x421D
+#define JOY4L 0x421E
+#define JOY4H 0x421F
+
+#define DMAPx 0x4300
+#define BBADx 0x4301
+#define A1TxL 0x4302 
+#define A1TxH 0x4303
+#define A1Bx 0x4304
+#define DASxL 0x4305
+#define DASxH 0x4306
+#define DASBx 0x4307
+#define A2AxL 0x4308 
+#define A2AxH 0x4309
+#define NLTRx 0x430A
+#define UNUSED1 0x430B 
+#define UNUSED2 0x430F
+#define swap_channels(addr, n) (addr & 0xFFFFFF0F) | (n << 4) 
 
 #endif // REGISTERS_H

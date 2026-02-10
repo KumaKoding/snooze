@@ -447,6 +447,64 @@ struct Ricoh_5A22
 
 	int NMI_line;
 	int IRQ_line;
+
+	struct 
+	{
+		int NMIEN;
+		enum 
+		{
+			DISABLE,
+			ENABLEV,
+			ENABLEH,
+			ENABLEHV
+		} IRQEN;
+		int joypad_autoread;
+
+		int joypadIO_port1;
+		int joypadIO_port2;
+
+		uint8_t multiplication_factorA;
+		uint8_t multiplication_factorB;
+
+		uint16_t dividend;
+		uint8_t divisor;
+
+		uint16_t horizontal_IRQ_target;
+		uint16_t vertical_IRQ_target;
+
+		int MDMA_enable[8];
+		int HDMA_enable[8];
+
+		int fast_ROM;
+
+		int NMI_flag;
+		uint8_t cpu_version;
+
+		int timer_flag;
+
+		int Vblank_flag;
+		int Hblank_flag;
+		int joypad_autoread_flag;
+
+		uint16_t quotient;
+		uint16_t product_or_remainder;
+
+		struct 
+		{
+			int B;
+			int Y;
+			int select;
+			int start;
+			int up;
+			int down;
+			int left;
+			int right;
+			int A;
+			int X;
+			int L;
+			int R;
+		} joypad_data[4];
+	} internal_registers;
 };
 
 void print_cpu(struct Ricoh_5A22 *cpu);

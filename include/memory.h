@@ -144,6 +144,10 @@ union ROM_t
 struct Memory
 {
 	uint8_t *WRAM;
+	uint32_t WRAM_addr; // https://snes.nesdev.org/wiki/WRAM_pinout
+						// PS1, /PS5..1: Peripheral select, connected to PA7..2 to map S-WRAM to peripheral bus addresses $80-83.
+						// PA1..0: These select the S-WRAM register being accessed on the peripheral bus (WRAM data or address).
+
 	uint8_t *REG;
 
 	uint8_t ROM_type_marker;
@@ -177,6 +181,8 @@ uint8_t DB_read(struct data_bus *data_bus, uint32_t addr);
 uint8_t mem_read(struct data_bus *data_bus, uint32_t addr);
 
 void ROM_write(struct data_bus *data_bus, uint32_t addr, uint8_t val);
+void write_register_raw(struct data_bus *data_bus, uint32_t addr, uint8_t val);
+uint8_t read_register_raw(struct data_bus *data_bus, uint32_t addr);
 void DB_write(struct data_bus *data_bus, uint32_t index, uint8_t write_val);
 void mem_write(struct data_bus *data_bus, uint32_t index, uint8_t write_val);
 
@@ -190,5 +196,8 @@ uint8_t read_OAM(struct data_bus *data_bus, uint16_t addr);
 void write_OAM(struct data_bus *data_bus, uint16_t addr, uint8_t byte);
 void write_CGRAM_word(struct data_bus *data_bus, uint16_t addr, uint16_t word);
 uint16_t read_CGRAM(struct data_bus *data_bus, uint16_t addr);
+
+void read_wram_register(struct data_bus *data_bus, uint32_t addr);
+void write_wram_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_value);
 
 #endif

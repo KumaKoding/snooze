@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #include "memory.h"
 #include "PPU.h"
 #include "registers.h"
@@ -28,6 +30,8 @@ uint8_t check_bit16(uint16_t ps, uint16_t mask)
 
 	return 0x00;
 }
+
+
 
 uint16_t read_VRAM(struct data_bus *data_bus, uint16_t addr)
 {
@@ -347,7 +351,7 @@ void write_ppu_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_
 				break;
 			case 2: 
 				ppu->address_increment = 128;
-				
+			
 				break;
 			case 3:
 				ppu->address_increment = 128;
@@ -397,12 +401,12 @@ void write_ppu_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_
 
 	if(addr == OAMADDL)
 	{
-		ppu->OAM_addr = LE_COMBINE_2BYTE(mem_read(data_bus, OAMADDL), mem_read(data_bus, OAMADDH)) * 2;
+		ppu->OAM_addr = LE_COMBINE_2BYTE(read_register_raw(data_bus, OAMADDL), read_register_raw(data_bus, OAMADDH)) * 2;
 	}
 
 	if(addr == OAMADDH)
 	{
-		ppu->OAM_addr = LE_COMBINE_2BYTE(mem_read(data_bus, OAMADDL), mem_read(data_bus, OAMADDH)) * 2;
+		ppu->OAM_addr = LE_COMBINE_2BYTE(read_register_raw(data_bus, OAMADDL), read_register_raw(data_bus, OAMADDH)) * 2;
 	}
 
 	if(addr == OAMDATA)
@@ -428,14 +432,14 @@ void write_ppu_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_
 	if(addr == VMADDL)
 	{
 		// cannot read during blanks
-		ppu->VRAM_addr = LE_COMBINE_2BYTE(mem_read(data_bus, VMADDL), mem_read(data_bus, VMADDH)) * 2;
+		ppu->VRAM_addr = LE_COMBINE_2BYTE(read_register_raw(data_bus, VMADDL), read_register_raw(data_bus, VMADDH)) * 2;
 		ppu->VRAM_latch = read_VRAM(data_bus, ppu->VRAM_addr);
 	}
 
 	if(addr == VMADDH)
 	{
 		// cannot read during blanks
-		ppu->VRAM_addr = LE_COMBINE_2BYTE(mem_read(data_bus, VMADDL), mem_read(data_bus, VMADDH));
+		ppu->VRAM_addr = LE_COMBINE_2BYTE(read_register_raw(data_bus, VMADDL), read_register_raw(data_bus, VMADDH));
 		ppu->VRAM_latch = read_VRAM(data_bus, ppu->VRAM_addr);
 	}
 
@@ -511,37 +515,37 @@ void read_ppu_register(struct data_bus *data_bus, uint32_t addr)
 	if(addr == OAMDATAREAD)
 	{
 		uint8_t read = read_OAM(data_bus, ppu->OAM_addr);
-		mem_write(data_bus, OAMDATAREAD, read);
+		write_register_raw(data_bus, OAMDATAREAD, read);
 		ppu->PPU1_bus = read;
 
 		ppu->OAM_addr++;
 	}
 
-	if(addr == OAMDATAREAD) { mem_write(data_bus, OAMDATAREAD, ppu->PPU1_bus); }
-	if(addr == BGMODE) { mem_write(data_bus, BGMODE, ppu->PPU1_bus); }
-	if(addr == MOSAIC) { mem_write(data_bus, MOSAIC, ppu->PPU1_bus); }
-	if(addr == BG2SC) { mem_write(data_bus, BG2SC, ppu->PPU1_bus); }
-	if(addr == BG3SC) { mem_write(data_bus, BG3SC, ppu->PPU1_bus); }
-	if(addr == BG4SC) { mem_write(data_bus, BG4SC, ppu->PPU1_bus); }
+	if(addr == OAMDATAREAD) { write_register_raw(data_bus, OAMDATAREAD, ppu->PPU1_bus); }
+	if(addr == BGMODE) { write_register_raw(data_bus, BGMODE, ppu->PPU1_bus); }
+	if(addr == MOSAIC) { write_register_raw(data_bus, MOSAIC, ppu->PPU1_bus); }
+	if(addr == BG2SC) { write_register_raw(data_bus, BG2SC, ppu->PPU1_bus); }
+	if(addr == BG3SC) { write_register_raw(data_bus, BG3SC, ppu->PPU1_bus); }
+	if(addr == BG4SC) { write_register_raw(data_bus, BG4SC, ppu->PPU1_bus); }
 
-	if(addr == BG4VOFS) { mem_write(data_bus, BG4VOFS, ppu->PPU1_bus); }
-	if(addr == VMAIN) { mem_write(data_bus, VMAIN, ppu->PPU1_bus); }
-	if(addr == VMADDL) { mem_write(data_bus, VMADDL, ppu->PPU1_bus); }
-	if(addr == VMDATAL) { mem_write(data_bus, VMDATAL, ppu->PPU1_bus); }
-	if(addr == VMDATAH) { mem_write(data_bus, VMDATAH, ppu->PPU1_bus); }
-	if(addr == M7SEL) { mem_write(data_bus, M7SEL, ppu->PPU1_bus); }
+	if(addr == BG4VOFS) { write_register_raw(data_bus, BG4VOFS, ppu->PPU1_bus); }
+	if(addr == VMAIN) { write_register_raw(data_bus, VMAIN, ppu->PPU1_bus); }
+	if(addr == VMADDL) { write_register_raw(data_bus, VMADDL, ppu->PPU1_bus); }
+	if(addr == VMDATAL) { write_register_raw(data_bus, VMDATAL, ppu->PPU1_bus); }
+	if(addr == VMDATAH) { write_register_raw(data_bus, VMDATAH, ppu->PPU1_bus); }
+	if(addr == M7SEL) { write_register_raw(data_bus, M7SEL, ppu->PPU1_bus); }
 
-	if(addr == W34SEL) { mem_write(data_bus, W34SEL, ppu->PPU1_bus); }
-	if(addr == WOBJSEL) { mem_write(data_bus, WOBJSEL, ppu->PPU1_bus); }
-	if(addr == WH0) { mem_write(data_bus, WH0, ppu->PPU1_bus); }
-	if(addr == WH2) { mem_write(data_bus, WH2, ppu->PPU1_bus); }
-	if(addr == WH3) { mem_write(data_bus, WH3, ppu->PPU1_bus); }
-	if(addr == WBGLOG) { mem_write(data_bus, WBGLOG, ppu->PPU1_bus); }
+	if(addr == W34SEL) { write_register_raw(data_bus, W34SEL, ppu->PPU1_bus); }
+	if(addr == WOBJSEL) { write_register_raw(data_bus, WOBJSEL, ppu->PPU1_bus); }
+	if(addr == WH0) { write_register_raw(data_bus, WH0, ppu->PPU1_bus); }
+	if(addr == WH2) { write_register_raw(data_bus, WH2, ppu->PPU1_bus); }
+	if(addr == WH3) { write_register_raw(data_bus, WH3, ppu->PPU1_bus); }
+	if(addr == WBGLOG) { write_register_raw(data_bus, WBGLOG, ppu->PPU1_bus); }
 
 	if(addr == VMDATALREAD)
 	{
 		uint8_t read = LE_LBYTE16(ppu->VRAM_latch);
-		mem_write(data_bus, VMDATALREAD, read);
+		write_register_raw(data_bus, VMDATALREAD, read);
 		ppu->PPU1_bus = read;
 
 		if(ppu->VRAM_increment_mode == 0)
@@ -554,7 +558,7 @@ void read_ppu_register(struct data_bus *data_bus, uint32_t addr)
 	if(addr == VMDATAHREAD)
 	{
 		uint8_t read = LE_HBYTE16(ppu->VRAM_latch);
-		mem_write(data_bus, VMDATALREAD, read);
+		write_register_raw(data_bus, VMDATALREAD, read);
 		ppu->PPU1_bus = read;
 
 		if(ppu->VRAM_increment_mode == 1)
@@ -571,7 +575,7 @@ void read_ppu_register(struct data_bus *data_bus, uint32_t addr)
 		{
 			uint8_t read =  LE_HBYTE16(read_CGRAM(data_bus, ppu->CGRAM_addr));
 			read = (read & (~0x80)) | (ppu->PPU2_bus & 0x80);
-			mem_write(data_bus, CGDATAREAD, read);
+			write_register_raw(data_bus, CGDATAREAD, read);
 			ppu->PPU2_bus = read;
 
 			ppu->CGRAM_check = 0;
@@ -579,7 +583,7 @@ void read_ppu_register(struct data_bus *data_bus, uint32_t addr)
 		else
 		{
 			uint8_t read =  LE_LBYTE16(read_CGRAM(data_bus, ppu->CGRAM_addr));
-			mem_write(data_bus, CGDATAREAD, read);
+			write_register_raw(data_bus, CGDATAREAD, read);
 			ppu->PPU2_bus = read;
 
 			ppu->CGRAM_check = 1;
@@ -588,7 +592,7 @@ void read_ppu_register(struct data_bus *data_bus, uint32_t addr)
 
 	if(addr == SLHV)
 	{
-		if(mem_read(data_bus, WRIO) & 0x80)
+		if(read_register_raw(data_bus, WRIO) & 0x80)
 		{
 			latch_HVCT(ppu);
 		}
@@ -599,14 +603,14 @@ void read_ppu_register(struct data_bus *data_bus, uint32_t addr)
 		if(ppu->OPHCT_byte == 0)
 		{
 			uint8_t read = LE_LBYTE16(ppu->hscan_counter);
-			mem_write(data_bus, addr, read);
+			write_register_raw(data_bus, addr, read);
 			ppu->PPU2_bus = read;
 		}
 		else 
 		{
 			uint8_t read = LE_HBYTE16(ppu->hscan_counter);
 			read = (read & 0x01) | (ppu->PPU2_bus & (~0x01));
-			mem_write(data_bus, addr, read);
+			write_register_raw(data_bus, addr, read);
 			ppu->PPU2_bus = read;
 		}
 
@@ -618,14 +622,14 @@ void read_ppu_register(struct data_bus *data_bus, uint32_t addr)
 		if(ppu->OPVCT_byte == 0)
 		{
 			uint8_t read = LE_LBYTE16(ppu->vscan_counter);
-			mem_write(data_bus, addr, read);
+			write_register_raw(data_bus, addr, read);
 			ppu->PPU2_bus = read;
 		}
 		else 
 		{
 			uint8_t read = LE_HBYTE16(ppu->vscan_counter);
 			read = (read & 0x01) | (ppu->PPU2_bus & (~0x01));
-			mem_write(data_bus, addr, read);
+			write_register_raw(data_bus, addr, read);
 			ppu->PPU2_bus = read;
 		}
 
@@ -654,7 +658,7 @@ void read_ppu_register(struct data_bus *data_bus, uint32_t addr)
 		stat |= ppu->PPU1_bus & 0x10;
 		stat |= ppu->PPU1_version & 0b00001111;
 
-		mem_write(data_bus, addr, stat);
+		write_register_raw(data_bus, addr, stat);
 		ppu->PPU1_bus = stat;
 	}
 
@@ -665,7 +669,7 @@ void read_ppu_register(struct data_bus *data_bus, uint32_t addr)
 		ppu->OPVCT_byte = 0;
 		ppu->OPHCT_byte = 0;
 
-		if(mem_read(data_bus, WRIO) & 0x80)
+		if(read_register_raw(data_bus, WRIO) & 0x80)
 		{
 			ppu->counter_latch = 0;
 		}
@@ -691,7 +695,7 @@ void read_ppu_register(struct data_bus *data_bus, uint32_t addr)
 
 		stat |= ppu->PPU2_version & 0b00001111;
 
-		mem_write(data_bus, addr, stat);
+		write_register_raw(data_bus, addr, stat);
 		ppu->PPU2_bus = stat;
 	}
 }

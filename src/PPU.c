@@ -118,7 +118,7 @@ void M0_dot(struct data_bus *data_bus, struct Memory *memory)
 		ppu->interlace_field = ~ppu->interlace_field;
 		ppu->y = 0;
 
-		mem_write(data_bus, NMI, 0x80);
+		write_register_raw(data_bus, RDNMI, 0x80);
 	}
 }
 

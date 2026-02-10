@@ -203,6 +203,8 @@ struct PPU
 	int PPU2_open_bus;
 	int frame_rate; // 0 -> 60hz, 1 -> 50hz
 	uint8_t PPU2_version;
+	uint8_t WRAM_data;
+	uint32_t WRAM_addr;
 
 	uint8_t PPU1_bus;
 	uint8_t PPU2_bus;

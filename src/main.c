@@ -15,17 +15,25 @@ int main(int argc, char *argv[])
 {
 	struct data_bus data_bus;
 
-	struct Ricoh_5A22 cpu;
 	struct Memory memory;
+	struct Ricoh_5A22 cpu;
 	struct S_PPU s_ppu;
+	struct DMA dma;
 
-	data_bus.A_Bus.cpu = &cpu;
 	data_bus.A_Bus.memory = &memory;
+	data_bus.A_Bus.cpu = &cpu;
 	data_bus.B_bus.ppu = &s_ppu;
+	data_bus.B_bus.dma = &dma;
 
-	reset_ricoh_5a22(&data_bus);
 	init_memory(&memory, LoROM_MARKER);
+	if(argc > 1)
+	{
+		load_ROM(argv[1], &data_bus);
+	}
+	reset_ricoh_5a22(&data_bus);
 	init_s_ppu(&s_ppu);
+	// init_DMA(&data_bus);
+
 
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_Window *Window = SDL_CreateWindow("Snooze", 640, 480, SDL_WINDOW_OPENGL);
@@ -59,27 +67,14 @@ int main(int argc, char *argv[])
 		Empty,
 		Fetched,
 		Executing,
-		Interrupted,
 	} loop_state = Empty;
+
 
 	while(!cpu.LPM)
 	{
 		if(cpu.queued_cyles == 0)
 		{
-			if(loop_state == Executing)
-			{
-				if(cpu.IRQ_line == 0)
-				{
-					loop_state = Interrupted;
-				}
-
-				if(cpu.NMI_line == 0)
-				{
-					loop_state = Interrupted;
-				}
-			}
-
-			if(loop_state == Empty)
+			if(loop_state == Empty || loop_state == Executing)
 			{
 				instruction = fetch(&data_bus);
 				loop_state = Fetched;
@@ -92,24 +87,30 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		populate_MDMA(&data_bus);
-		populate_HDMA(&data_bus);
-
 		if(s_ppu.ppu->queued_cycles == 0)
 		{
 			ppu_dot(&data_bus);
 		}
 
+		if(loop_state != Executing)
+		{
+			if(cpu.IRQ_line == 0)
+			{
+				hw_irq(&data_bus);
+			}
+
+			if(cpu.NMI_line == 0)
+			{
+				hw_nmi(&data_bus);
+			}
+		}
+
+		data_bus.B_bus.ppu->ppu->range_over = 0;
+		data_bus.B_bus.ppu->ppu->time_over = 0;
+
 		if(cpu.RDY)
 		{
 			cpu.queued_cyles--;
-		}
-		else 
-		{
-			if(cpu.NMI_line || cpu.IRQ_line)
-			{
-				cpu.RDY = 1;
-			}
 		}
 	}
 

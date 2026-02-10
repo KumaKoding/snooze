@@ -27,14 +27,12 @@ void load_ROM(const char *filename, struct data_bus *data_bus)
 	{
 		uint32_t n_bytes = b * byte_height;
 
-		for(uint16_t addr = 0; addr < byte_height && n_bytes < ROM_info.st_size; b++)
+		for(uint16_t addr = 0; addr < byte_height && n_bytes < ROM_info.st_size; addr++)
 		{
-			uint32_t A_addr = ((0x00000000 | b) << 16) | addr;
+			uint32_t A_addr = ((0x00000000 | b) << 16) | (LoROM_ROM_BYTES[0] + addr);
 
 			ROM_write(data_bus, A_addr, rom[n_bytes]);
 			n_bytes++;
-
-			printf("%u\n", n_bytes);
 		}
 	}
 
@@ -42,7 +40,7 @@ void load_ROM(const char *filename, struct data_bus *data_bus)
 
 	for(int i = 0; i < 21; i++)
 	{
-		printf("%c", DB_read(data_bus, 0x00FFC0 + i));
+		printf("%c", mem_read(data_bus, 0x00FFC0 + i));
 	}
 
 	printf("\n");
