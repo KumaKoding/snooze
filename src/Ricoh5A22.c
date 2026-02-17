@@ -3002,21 +3002,12 @@ uint8_t fetch(struct data_bus *data_bus)
 }
 
 
-#define DEBUG_OPCODES 0
+#define DEBUG_OPCODES 1
 
 void execute(struct data_bus *data_bus, uint8_t instruction)
 {
-	#if DEBUG_OPCODES
-		printf("%02x\n", instruction);
-	#endif
-
-	if(data_bus->A_Bus.cpu->program_ctr == 0x8483)
-	{
-		print_cpu(data_bus->A_Bus.cpu);
-		printf("%02x\n", instruction);
-	}
-
 	switch(instruction)
+	if(data_bus->A_Bus.cpu->program_ctr == 0x8483)
 	{
 		uint32_t data_addr;
 

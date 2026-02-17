@@ -454,14 +454,13 @@ struct Ricoh_5A22
 		enum 
 		{
 			DISABLE,
-			ENABLEV,
-			ENABLEH,
-			ENABLEHV
+			ENABLEVTIME,
+			ENABLEHTIME,
+			ENABLEHVTIME
 		} IRQEN;
 		int joypad_autoread;
 
-		int joypadIO_port1;
-		int joypadIO_port2;
+		uint8_t IO_port_byte;
 
 		uint8_t multiplication_factorA;
 		uint8_t multiplication_factorB;
@@ -480,7 +479,7 @@ struct Ricoh_5A22
 		int NMI_flag;
 		uint8_t cpu_version;
 
-		int timer_flag;
+		int IRQ_flag;
 
 		int Vblank_flag;
 		int Hblank_flag;
@@ -504,6 +503,8 @@ struct Ricoh_5A22
 			int L;
 			int R;
 		} joypad_data[4];
+
+		uint8_t interal_read_bus;
 	} internal_registers;
 };
 

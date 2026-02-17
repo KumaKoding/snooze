@@ -35,55 +35,54 @@ int main(int argc, char *argv[])
 	// init_DMA(&data_bus);
 
 
-	SDL_Init(SDL_INIT_VIDEO);
-	SDL_Window *Window = SDL_CreateWindow("Snooze", 640, 480, SDL_WINDOW_OPENGL);
-
-	if(Window == NULL)
-	{
-		printf(":(\n");
-	}
-
-	SDL_Event event;
-	bool quit = false;
-
-	while(!quit)
-	{
-		while(SDL_PollEvent(&event))
-		{
-			if(event.type == SDL_EVENT_QUIT)
-			{
-				quit = true;
-			}
-		}
-	}
-
-
-	SDL_DestroyWindow(Window);
-	SDL_Quit();
+	// SDL_Init(SDL_INIT_VIDEO);
+	// SDL_Window *Window = SDL_CreateWindow("Snooze", 640, 480, SDL_WINDOW_OPENGL);
+	//
+	// if(Window == NULL)
+	// {
+	// 	printf(":(\n");
+	// }
+	//
+	// SDL_Event event;
+	// bool quit = false;
+	//
+	// while(!quit)
+	// {
+	// 	while(SDL_PollEvent(&event))
+	// 	{
+	// 		if(event.type == SDL_EVENT_QUIT)
+	// 		{
+	// 			quit = true;
+	// 		}
+	// 	}
+	// }
+	//
+	// SDL_DestroyWindow(Window);
+	// SDL_Quit();
 
 	uint8_t instruction = 0x00;
 	enum 
 	{
 		Empty,
 		Fetched,
-		Executing,
 	} loop_state = Empty;
-
 
 	while(!cpu.LPM)
 	{
+		cpu.NMI_line = !(cpu.internal_registers.NMIEN & cpu.internal_registers.NMI_flag);
+		cpu.IRQ_line = !((cpu.internal_registers.IRQEN != DISABLE) & cpu.internal_registers.IRQ_flag);
+
 		if(cpu.queued_cyles == 0)
 		{
-			if(loop_state == Empty || loop_state == Executing)
+			if(loop_state == Empty)
 			{
 				instruction = fetch(&data_bus);
 				loop_state = Fetched;
 			}
-
-			if(loop_state == Fetched)
+			else if(loop_state == Fetched)
 			{
 				execute(&data_bus, instruction);
-				loop_state = Executing;
+				loop_state = Empty;
 			}
 		}
 
@@ -92,26 +91,24 @@ int main(int argc, char *argv[])
 			ppu_dot(&data_bus);
 		}
 
-		if(loop_state != Executing)
+		if(loop_state == Empty)
 		{
-			if(cpu.IRQ_line == 0)
-			{
-				hw_irq(&data_bus);
-			}
-
 			if(cpu.NMI_line == 0)
 			{
 				hw_nmi(&data_bus);
 			}
+			else if(cpu.IRQ_line == 0)
+			{
+				hw_irq(&data_bus);
+			}
 		}
-
-		data_bus.B_bus.ppu->ppu->range_over = 0;
-		data_bus.B_bus.ppu->ppu->time_over = 0;
 
 		if(cpu.RDY)
 		{
 			cpu.queued_cyles--;
 		}
+
+		s_ppu.ppu->queued_cycles--;
 	}
 
 	return 0;

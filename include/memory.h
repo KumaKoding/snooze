@@ -200,4 +200,13 @@ uint16_t read_CGRAM(struct data_bus *data_bus, uint16_t addr);
 void read_wram_register(struct data_bus *data_bus, uint32_t addr);
 void write_wram_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_value);
 
+void read_cpu_register(struct data_bus *data_bus, uint32_t addr);
+void write_cpu_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_value);
+
+void signal_vblank(struct data_bus *data_bus);
+void clear_vblank(struct data_bus *data_bus);
+void signal_hblank(struct data_bus *data_bus);
+void clear_hblank(struct data_bus *data_bus);
+void check_IRQ(struct data_bus *data_bus);
+
 #endif

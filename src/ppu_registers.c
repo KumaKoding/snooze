@@ -21,7 +21,7 @@ uint8_t check_bit8(uint8_t ps, uint8_t mask)
 	return 0x00;
 }
 
-uint8_t check_bit16(uint16_t ps, uint16_t mask)
+static uint8_t check_bit16(uint16_t ps, uint16_t mask)
 {
 	if((ps & mask) == mask)
 	{
@@ -484,20 +484,27 @@ void write_ppu_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_
 	}
 }
 
-void latch_HVCT(struct PPU *ppu)
+void latch_HVCT(struct data_bus *data_bus)
 {
 	// put in wrio and joypad
-	if(ppu->HV_latch == 0)
-	{
-		ppu->HV_latch = 1;
+	struct PPU *ppu = data_bus->B_bus.ppu->ppu;
 
-		ppu->hscan_counter = ppu->x / 2;
-		ppu->vscan_counter = ppu->y / 2;
+	if(check_bit8(read_register_raw(data_bus, WRIO), 0x80)) 
+	{
+		if(ppu->HV_latch == 0)
+		{
+			ppu->HV_latch = 1;
+
+			ppu->hscan_counter = ppu->x / 2;
+			ppu->vscan_counter = ppu->y / 2;
+		}
 	}
 }
 
-void clear_HVCT(struct PPU *ppu)
+void clear_HVCT(struct data_bus *data_bus)
 {
+	struct PPU *ppu = data_bus->B_bus.ppu->ppu;
+
 	if(ppu->HV_latch == 1)
 	{
 		ppu->HV_latch = 0;
@@ -594,7 +601,7 @@ void read_ppu_register(struct data_bus *data_bus, uint32_t addr)
 	{
 		if(read_register_raw(data_bus, WRIO) & 0x80)
 		{
-			latch_HVCT(ppu);
+			latch_HVCT(data_bus);
 		}
 	}
 

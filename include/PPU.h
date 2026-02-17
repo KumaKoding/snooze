@@ -7,10 +7,17 @@
 #define DOTS 640
 #define LINES 525
 
-#define VRAM_WORD_WIDTH 2
+#define HIDE_DOTS 44
+#define HIDE_LINES 2
+
+#define VISIBLE_DOTS 512
+#define VISIBLE_LINES 448
+
+#define TILEMAP_BASE_SIDE 32
 
 #define M0_BACKGROUNDS 4
 
+#define VRAM_WORD_WIDTH 2
 #define VRAM_WORDS 32 * 1024
 #define OAM_LTABLE_BYTES 512 
 #define OAM_HTABLE_BYTES 32
@@ -210,12 +217,14 @@ struct PPU
 	uint8_t PPU2_bus;
 
 	int x, y;
-	int elapsed_cycles;
 	int queued_cycles;
 };
 
 void init_s_ppu(struct S_PPU *s_ppu);
 void ppu_dot(struct data_bus *data_bus);
+
+void latch_HVCT(struct data_bus *data_bus);
+void clear_HVCT(struct data_bus *data_bus);
 
 #endif // PPU_H
 

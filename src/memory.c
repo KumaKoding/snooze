@@ -235,8 +235,6 @@ void ROM_write(struct data_bus *data_bus, uint32_t addr, uint8_t val)
 	}
 }
 
-uint8_t NMI = 0xc2; // set high by default
-
 uint8_t mem_read(struct data_bus *data_bus, uint32_t addr)
 {
 	uint32_t cartridge_addr = addr;
@@ -268,26 +266,19 @@ uint8_t mem_read(struct data_bus *data_bus, uint32_t addr)
 	}
 	else if(IN_REG(addr))
 	{
-		if(addr == 0x4210)
-		{
-			data_bus->open_value = NMI;
-			
-			if(NMI == 0x42)
-			{
-				NMI = 0xC2;
-			}
-			else 
-			{
-				NMI = 0x42;
-			}
-		}
 		read_ppu_register(data_bus, addr);
 		read_wram_register(data_bus, addr);
+		read_cpu_register(data_bus, addr);
+
+		data_bus->open_value = data_bus->A_Bus.memory->REG[REG_indexer(addr)];
 	}
 	else if(IN_REG(mirror_addr)) 
 	{
-		read_ppu_register(data_bus, addr);
-		read_wram_register(data_bus, addr);
+		read_ppu_register(data_bus, mirror_addr);
+		read_wram_register(data_bus, mirror_addr);
+		read_cpu_register(data_bus, mirror_addr);
+
+		data_bus->open_value = data_bus->A_Bus.memory->REG[REG_indexer(mirror_addr)];
 	}
 	else if(data_bus->A_Bus.memory->ROM_type_marker == LoROM_MARKER)
 	{
@@ -353,12 +344,14 @@ void mem_write(struct data_bus *data_bus, uint32_t addr, uint8_t write_val)
 	{
 		write_ppu_register(data_bus, addr, write_val);
 		write_wram_register(data_bus, addr, write_val);
+		write_cpu_register(data_bus, addr, write_val);
 		data_bus->A_Bus.memory->REG[REG_indexer(addr)] = write_val;
 	}
 	else if(IN_REG(mirror_addr)) 
 	{
-		write_ppu_register(data_bus, addr, write_val);
-		write_wram_register(data_bus, addr, write_val);
+		write_ppu_register(data_bus, mirror_addr, write_val);
+		write_wram_register(data_bus, mirror_addr, write_val);
+		write_cpu_register(data_bus, mirror_addr, write_val);
 		data_bus->A_Bus.memory->REG[REG_indexer(mirror_addr)] = write_val;
 	}
 	else if(data_bus->A_Bus.memory->ROM_type_marker == LoROM_MARKER)
