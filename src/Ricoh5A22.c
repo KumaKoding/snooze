@@ -3007,7 +3007,6 @@ uint8_t fetch(struct data_bus *data_bus)
 void execute(struct data_bus *data_bus, uint8_t instruction)
 {
 	switch(instruction)
-	if(data_bus->A_Bus.cpu->program_ctr == 0x8483)
 	{
 		uint32_t data_addr;
 

@@ -85,33 +85,50 @@ void M0_dot(struct data_bus *data_bus)
 	struct PPU *ppu = data_bus->B_bus.ppu->ppu;
 	int layer = 0;
 
-	int horizontal_tiles = ppu->BGn_tilemap_info.horizontal_tilemaps[layer];
-	// int vertical_tiles = ppu->BGn_tilemap_info.vertical_tilemaps[layer];
+	// int horizontal_tiles = ppu->BGn_tilemap_info.horizontal_tilemaps[layer];
+	int vertical_tiles = ppu->BGn_tilemap_info.vertical_tilemaps[layer];
 
 	uint16_t VRAM_addr = ppu->BGn_tilemap_info.tilemap_vram_addr[layer] << 10;
-	int tilemap_width = horizontal_tiles * TILEMAP_BASE_SIDE;
 
-	uint16_t screen_x = ppu->y - HIDE_LINES;
-	uint16_t screen_y = ppu->x - HIDE_DOTS;
+	uint16_t screen_x = (ppu->y - HIDE_LINES) + ppu->BG_scroll_offset.BGn_horizontal_offset[layer];
+	uint16_t screen_y = (ppu->x - HIDE_DOTS) + ppu->BG_scroll_offset.BGn_vertical_offset[layer];
 
 	if(ppu->BGn_character_size[layer] == CH_SIZE_8x8)
 	{
-		VRAM_addr += (screen_x / 8);
-		VRAM_addr += (screen_y / 8) * tilemap_width;
+		int scaled_x = screen_x / 8;
+		int scaled_y = screen_y / 8;
+
+		if(scaled_x > TILEMAP_BASE_SIDE)
+		{
+			scaled_x = (scaled_x - TILEMAP_BASE_SIDE);
+			scaled_x += (TILEMAP_BASE_SIDE) * (vertical_tiles * TILEMAP_BASE_SIDE);
+		}
+
+		VRAM_addr += scaled_x;
+		VRAM_addr += scaled_y * TILEMAP_BASE_SIDE;
 
 		struct tilemap tile;
 		get_tile(&tile, data_bus, VRAM_addr, ppu->BGn_chr_tiles_offset[layer]);
 	}
 	else if(ppu->BGn_character_size[layer] == CH_SIZE_16x16)
 	{
-		VRAM_addr += (ppu->x / 16);
-		VRAM_addr += (ppu->y / 16) * tilemap_width;
+		int scaled_x = screen_x / 16;
+		int scaled_y = screen_y / 16;
+
+		if(scaled_x > TILEMAP_BASE_SIDE)
+		{
+			scaled_x = (scaled_x - TILEMAP_BASE_SIDE);
+			scaled_x += (TILEMAP_BASE_SIDE) * (vertical_tiles * TILEMAP_BASE_SIDE);
+		}
+
+		VRAM_addr += scaled_x * 2;
+		VRAM_addr += (scaled_y * 2) * (TILEMAP_BASE_SIDE * 2);
 
 		struct tilemap tile[4];
 		get_tile(&tile[0], data_bus, VRAM_addr, ppu->BGn_chr_tiles_offset[layer]);
 		get_tile(&tile[1], data_bus, VRAM_addr + 1, ppu->BGn_chr_tiles_offset[layer]);
-		get_tile(&tile[2], data_bus, VRAM_addr + tilemap_width, ppu->BGn_chr_tiles_offset[layer]);
-		get_tile(&tile[3], data_bus, VRAM_addr + tilemap_width + 1, ppu->BGn_chr_tiles_offset[layer]);
+		get_tile(&tile[2], data_bus, VRAM_addr + TILEMAP_BASE_SIDE, ppu->BGn_chr_tiles_offset[layer]);
+		get_tile(&tile[3], data_bus, VRAM_addr + TILEMAP_BASE_SIDE + 1, ppu->BGn_chr_tiles_offset[layer]);
 	}
 }
 
