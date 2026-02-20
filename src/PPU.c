@@ -35,7 +35,7 @@ static uint8_t check_bit16(uint16_t ps, uint16_t mask)
 
 void init_ppu(struct PPU *ppu)
 {
-	ppu->pixel_buf = malloc(DOTS * LINES * 3);
+	ppu->pixel_buf = malloc(DOTS * LINES * sizeof(Color_t));
 	ppu->x = 0;
 	ppu->y = 0;
 
@@ -80,6 +80,22 @@ void get_tile(struct tilemap *tilemap, struct data_bus *data_bus, uint16_t VRAM_
 	tilemap->tile_addr = tilemap->tile_addr | (tilemap_data & 0b0000001111111111);
 }
 
+void rgba_from_CGRAM(Color_t *color, uint16_t cg)
+{
+	const int BITS_PER_CHANNEL= 5;
+
+	uint8_t r = cg & 0b11111;
+	r = ((float)r / 0b11111) * 0xFF;
+	uint8_t g = (cg >> BITS_PER_CHANNEL) & 0b11111;
+	g = ((float)g / 0b11111) * 0xFF;
+	uint8_t b = (cg >> (BITS_PER_CHANNEL * 2)) & 0b11111;
+	b = ((float)b / 0b11111) * 0xFF;
+
+	color->r = r;
+	color->g = g;
+	color->b = b;
+}
+
 void M0_dot(struct data_bus *data_bus)
 {
 	struct PPU *ppu = data_bus->B_bus.ppu->ppu;
@@ -109,6 +125,35 @@ void M0_dot(struct data_bus *data_bus)
 
 		struct tilemap tile;
 		get_tile(&tile, data_bus, VRAM_addr, ppu->BGn_chr_tiles_offset[layer]);
+
+		Color_t tiledata[64];
+
+		for(int row = 0; row < 8; row++)
+		{
+			uint16_t bitplane = read_VRAM(data_bus, tile.tile_addr + row);
+
+			for(uint8_t p = 0; p < 8; p++)
+			{
+				int palette_index = (check_bit16(bitplane, 0x10 << p) << 1) | check_bit16(bitplane, 0x01 << p);
+				uint16_t color_data = read_CGRAM(data_bus, palette_index + (tile.palette * 4));
+
+				rgba_from_CGRAM(&tiledata[(row * 8) + p], color_data);
+
+				if(palette_index == 0)
+				{
+					tiledata[(row * 8) + p].a = 0;
+				}
+				else 
+				{
+					tiledata[(row * 8) + p].a = 0xFF;
+				}
+			}
+		}
+
+		int tile_x = screen_x % 8;
+		int tile_y = screen_y % 8;
+
+		ppu->pixel_buf[(screen_y * DOTS) + screen_x] = tiledata[(tile_y * 8) + tile_x];
 	}
 	else if(ppu->BGn_character_size[layer] == CH_SIZE_16x16)
 	{
@@ -121,14 +166,16 @@ void M0_dot(struct data_bus *data_bus)
 			scaled_x += (TILEMAP_BASE_SIDE) * (vertical_tiles * TILEMAP_BASE_SIDE);
 		}
 
-		VRAM_addr += scaled_x * 2;
-		VRAM_addr += (scaled_y * 2) * (TILEMAP_BASE_SIDE * 2);
+		VRAM_addr += scaled_x;
+		VRAM_addr += scaled_y * TILEMAP_BASE_SIDE;
 
-		struct tilemap tile[4];
-		get_tile(&tile[0], data_bus, VRAM_addr, ppu->BGn_chr_tiles_offset[layer]);
-		get_tile(&tile[1], data_bus, VRAM_addr + 1, ppu->BGn_chr_tiles_offset[layer]);
-		get_tile(&tile[2], data_bus, VRAM_addr + TILEMAP_BASE_SIDE, ppu->BGn_chr_tiles_offset[layer]);
-		get_tile(&tile[3], data_bus, VRAM_addr + TILEMAP_BASE_SIDE + 1, ppu->BGn_chr_tiles_offset[layer]);
+		struct tilemap tile;
+		get_tile(&tile, data_bus, VRAM_addr, ppu->BGn_chr_tiles_offset[layer]);
+		//
+		// uint16_t bitplane1 = read_VRAM(data_bus, tile.tile_addr);
+		// uint16_t bitplane2 = read_VRAM(data_bus, tile.tile_addr + 1);
+		// uint16_t bitplane3 = read_VRAM(data_bus, tile.tile_addr + TILESET_ROW_SIZE);
+		// uint16_t bitplane4 = read_VRAM(data_bus, tile.tile_addr + TILESET_ROW_SIZE + 1);
 	}
 }
 

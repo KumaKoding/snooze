@@ -14,6 +14,7 @@
 #define VISIBLE_LINES 448
 
 #define TILEMAP_BASE_SIDE 32
+#define TILESET_ROW_SIZE 16
 
 #define M0_BACKGROUNDS 4
 
@@ -64,9 +65,17 @@ enum window_regions
 	Everywhere
 };
 
+typedef struct 
+{
+	uint8_t r;
+	uint8_t g;
+	uint8_t b;
+	uint8_t a;
+} Color_t;
+
 struct PPU
 {
-	uint8_t *pixel_buf;
+	Color_t *pixel_buf;
 
 	int F_blank;
 	uint8_t brightness;
