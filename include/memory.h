@@ -16,9 +16,9 @@
 #define WRAM_BANKS (uint8_t[]){ 0x7E, 0x7F }
 #define WRAM_BYTES (uint16_t[]){ 0x0000, 0xFFFF }
 #define WRAM_LOWRAM_BYTES (uint16_t[]){ 0x0000, 0x1FFF }
-#define WRAM_LOWRAM_MIRROR_BANKS (uint8_t[]) { 0x00, 0x3F }
+#define WRAM_LOWRAM_MIRROR_BANKS (uint8_t[]) { 0x80, 0xBF }
 
-#define REG_BANKS (uint8_t[]){ 0x00, 0x3F }
+#define REG_BANKS (uint8_t[]){ 0x80, 0xBF }
 #define REG_BYTES (uint16_t[]){ 0x2000, 0x5FFF }
 #define REG_SIZE \
 	MEMORY_AREA(REG_BANKS[0], REG_BYTES[0], \
@@ -175,6 +175,8 @@ struct data_bus
 	uint8_t open_value;
 };
 
+uint32_t convert_to_cartridge_addr(uint32_t addr);
+
 void init_memory(struct Memory *memory, uint8_t ROM_type_marker);
 
 uint8_t DB_read(struct data_bus *data_bus, uint32_t addr);
@@ -183,8 +185,8 @@ uint8_t mem_read(struct data_bus *data_bus, uint32_t addr);
 void ROM_write(struct data_bus *data_bus, uint32_t addr, uint8_t val);
 void write_register_raw(struct data_bus *data_bus, uint32_t addr, uint8_t val);
 uint8_t read_register_raw(struct data_bus *data_bus, uint32_t addr);
-void DB_write(struct data_bus *data_bus, uint32_t index, uint8_t write_val);
-void mem_write(struct data_bus *data_bus, uint32_t index, uint8_t write_val);
+void DB_write(struct data_bus *data_bus, uint32_t addr, uint8_t write_val);
+void mem_write(struct data_bus *data_bus, uint32_t addr, uint8_t write_val);
 
 void read_ppu_register(struct data_bus *data_bus, uint32_t addr);
 void write_ppu_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_value);
@@ -208,5 +210,6 @@ void clear_vblank(struct data_bus *data_bus);
 void signal_hblank(struct data_bus *data_bus);
 void clear_hblank(struct data_bus *data_bus);
 void check_IRQ(struct data_bus *data_bus);
+void set_refresh(struct data_bus *data_bus);
 
 #endif

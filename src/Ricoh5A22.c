@@ -1,51 +1,11 @@
 #include "ricoh5A22.h"
 #include "memory.h"
+#include "utility.h"
 
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
-
-#define LE_HBYTE16(u16) (uint8_t)((u16 & 0xFF00) >> 8)
-#define LE_LBYTE16(u16) (uint8_t)(u16 & 0x00FF)
-
-#define SWP_LE_LBYTE16(u16, u8) ((u16 & 0xFF00) | u8)
-#define SWP_LE_HBYTE16(u16, u8) ((u16 & 0x00FF) | ((0x0000 | u8) << 8))
-
-#define LE_COMBINE_BANK_SHORT(bank, us) (uint32_t)(((((0x00000000 | bank) << 8) | ((us & 0xFF00) >> 8)) << 8) | (us & 0x00FF))
-#define LE_COMBINE_BANK_2BYTE(bank, b1, b2) (uint32_t)(((((0x00000000 | bank) << 8) | b2) << 8) | b1)
-#define LE_COMBINE_2BYTE(b1, b2) (uint16_t)(((0x0000 | b2) << 8) | b1)
-#define LE_COMBINE_3BYTE(b1, b2, b3) (uint32_t)(((((0x00000000 | b3) << 8) | b2) << 8) | b1)
-
-static uint8_t check_bit8(uint8_t ps, uint8_t mask)
-{
-	if((ps & mask) == mask)
-	{
-		return 0x01;
-	}
-
-	return 0x00;
-}
-
-static uint8_t check_bit16(uint16_t ps, uint16_t mask)
-{
-	if((ps & mask) == mask)
-	{
-		return 0x01;
-	}
-
-	return 0x00;
-}
-
-static uint8_t check_bit32(uint32_t ps, uint32_t mask)
-{
-	if((ps & mask) == mask)
-	{
-		return 0x01;
-	}
-
-	return 0x00;
-}
 
 void add_internal_operation(struct data_bus *data_bus)
 {
@@ -2963,32 +2923,29 @@ void hw_irq(struct data_bus *data_bus)
 
 	cpu->RDY = 1;
 	
-	if(!check_bit8(cpu->cpu_status, CPU_STATUS_I))
+	// I don't know
+	fetch(data_bus);
+	// probably getting stack_ptr
+	add_internal_operation(data_bus);
+
+	uint16_t short_addr = 0x00;
+
+	if(check_bit8(cpu->cpu_emulation6502, CPU_STATUS_E))
 	{
-		// I don't know
-		fetch(data_bus);
-		// probably getting stack_ptr
-		add_internal_operation(data_bus);
-
-		uint16_t short_addr = 0x00;
-
-		if(check_bit8(cpu->cpu_emulation6502, CPU_STATUS_E))
-		{
-			push_SP(data_bus, cpu->program_bank);
-		}
-
-		push_SP(data_bus, LE_HBYTE16(cpu->program_ctr));
-		push_SP(data_bus, LE_LBYTE16(cpu->program_ctr));
-		push_SP(data_bus, cpu->cpu_status);
-
-		if(check_bit8(cpu->cpu_emulation6502, CPU_STATUS_E))
-		{
-			short_addr = LE_COMBINE_2BYTE(DB_read(data_bus, NMI_VECTOR_6502[0]), DB_read(data_bus, NMI_VECTOR_6502[1]));
-		}
-
-		cpu->program_bank = 0x00;
-		cpu->program_ctr = short_addr;
+		push_SP(data_bus, cpu->program_bank);
 	}
+
+	push_SP(data_bus, LE_HBYTE16(cpu->program_ctr));
+	push_SP(data_bus, LE_LBYTE16(cpu->program_ctr));
+	push_SP(data_bus, cpu->cpu_status);
+
+	if(check_bit8(cpu->cpu_emulation6502, CPU_STATUS_E))
+	{
+		short_addr = LE_COMBINE_2BYTE(DB_read(data_bus, NMI_VECTOR_6502[0]), DB_read(data_bus, NMI_VECTOR_6502[1]));
+	}
+
+	cpu->program_bank = 0x00;
+	cpu->program_ctr = short_addr;
 }
 
 uint8_t fetch(struct data_bus *data_bus)

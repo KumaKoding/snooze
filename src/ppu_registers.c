@@ -3,35 +3,7 @@
 #include "memory.h"
 #include "PPU.h"
 #include "registers.h"
-
-#define LE_HBYTE16(u16) (uint8_t)((u16 & 0xFF00) >> 8)
-#define LE_LBYTE16(u16) (uint8_t)(u16 & 0x00FF)
-
-#define SWP_LE_LBYTE16(u16, u8) ((u16 & 0xFF00) | u8)
-#define SWP_LE_HBYTE16(u16, u8) ((u16 & 0x00FF) | ((0x0000 | u8) << 8))
-#define LE_COMBINE_2BYTE(b1, b2) (uint16_t)(((0x0000 | b2) << 8) | b1)
-
-uint8_t check_bit8(uint8_t ps, uint8_t mask)
-{
-	if((ps & mask) == mask)
-	{
-		return 0x01;
-	}
-
-	return 0x00;
-}
-
-static uint8_t check_bit16(uint16_t ps, uint16_t mask)
-{
-	if((ps & mask) == mask)
-	{
-		return 0x01;
-	}
-
-	return 0x00;
-}
-
-
+#include "utility.h"
 
 uint16_t read_VRAM(struct data_bus *data_bus, uint16_t addr)
 {

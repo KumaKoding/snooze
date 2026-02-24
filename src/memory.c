@@ -164,55 +164,7 @@ uint32_t LoROM_SRAM_mirror_indexer(uint32_t index)
 	return new_index;
 }
 
-uint8_t read_register_raw(struct data_bus *data_bus, uint32_t addr)
-{
-	uint32_t cartridge_addr = addr;
-	uint8_t cartridge_byte = (uint8_t)((addr & 0x00FF0000) >> 16);
-
-	if(cartridge_byte > WRAM_BANKS[0])
-	{
-		cartridge_byte = cartridge_byte - 0x80;
-
-		cartridge_addr = addr & 0x0000FFFF;
-		cartridge_addr |= (0x00000000 | cartridge_byte) << 16;
-	}
-
-	if(IN_REG(cartridge_addr))
-	{
-		return data_bus->A_Bus.memory->REG[REG_indexer(cartridge_addr)];
-	}
-	else 
-	{
-		printf("Failed read: not a register\n");
-
-		return data_bus->open_value;
-	}
-}
-
-void write_register_raw(struct data_bus *data_bus, uint32_t addr, uint8_t val)
-{
-	uint32_t cartridge_addr = addr;
-	uint8_t cartridge_byte = (uint8_t)((addr & 0x00FF0000) >> 16);
-
-	if(cartridge_byte > WRAM_BANKS[0])
-	{
-		cartridge_byte = cartridge_byte - 0x80;
-
-		cartridge_addr = addr & 0x0000FFFF;
-		cartridge_addr |= (0x00000000 | cartridge_byte) << 16;
-	}
-
-	if(IN_REG(cartridge_addr))
-	{
-		data_bus->A_Bus.memory->REG[REG_indexer(cartridge_addr)] = val;
-	}
-	else 
-	{
-		printf("Failed write: not a register\n");
-	}
-}
-
-void ROM_write(struct data_bus *data_bus, uint32_t addr, uint8_t val)
+uint32_t convert_to_cartridge_addr(uint32_t addr)
 {
 	uint32_t cartridge_addr = addr;
 	uint8_t cartridge_byte = (uint8_t)((addr & 0x00FF0000) >> 16);
@@ -224,6 +176,43 @@ void ROM_write(struct data_bus *data_bus, uint32_t addr, uint8_t val)
 		cartridge_addr = addr & 0x0000FFFF;
 		cartridge_addr |= (0x00000000 | cartridge_byte) << 16;
 	}
+
+	return cartridge_addr;
+}
+
+uint8_t read_register_raw(struct data_bus *data_bus, uint32_t addr)
+{
+	uint32_t cartridge_addr = convert_to_cartridge_addr(addr);
+
+	if(IN_REG(cartridge_addr))
+	{
+		return data_bus->A_Bus.memory->REG[REG_indexer(cartridge_addr)];
+	}
+	else 
+	{
+		printf("Failed read: %06x not a register\n", cartridge_addr);
+
+		return data_bus->open_value;
+	}
+}
+
+void write_register_raw(struct data_bus *data_bus, uint32_t addr, uint8_t val)
+{
+	uint32_t cartridge_addr = convert_to_cartridge_addr(addr);
+
+	if(IN_REG(cartridge_addr))
+	{
+		data_bus->A_Bus.memory->REG[REG_indexer(cartridge_addr)] = val;
+	}
+	else 
+	{
+		printf("Failed write: %06x not a register\n", addr);
+	}
+}
+
+void ROM_write(struct data_bus *data_bus, uint32_t addr, uint8_t val)
+{
+	uint32_t cartridge_addr = convert_to_cartridge_addr(addr);
 
 	if(IN_LoROM_ROM(cartridge_addr))
 	{
@@ -237,48 +226,25 @@ void ROM_write(struct data_bus *data_bus, uint32_t addr, uint8_t val)
 
 uint8_t mem_read(struct data_bus *data_bus, uint32_t addr)
 {
-	uint32_t cartridge_addr = addr;
-	uint8_t cartridge_byte = (uint8_t)((addr & 0x00FF0000) >> 16);
+	uint32_t cartridge_addr = convert_to_cartridge_addr(addr);
 
-	if(cartridge_byte < WRAM_BANKS[0])
+	if(IN_WRAM(cartridge_addr))
 	{
-		cartridge_byte = cartridge_byte + 0x80;
-
-		cartridge_addr = addr & 0x0000FFFF;
-		cartridge_addr |= (0x00000000 | cartridge_byte) << 16;
+		data_bus->open_value = data_bus->A_Bus.memory->WRAM[WRAM_indexer(cartridge_addr)];
 	}
-
-	uint32_t mirror_addr = (addr & 0x0000FFFF);
-	uint8_t mirror_byte = (uint8_t)((addr & 0x00FF0000) >> 16) + 0x80;
-	mirror_addr |= ((0x00000000 | mirror_byte) << 16);
-
-	if(IN_WRAM(addr))
+	else if(IN_WRAM_LOWRAM_MIRROR(cartridge_addr))
 	{
-		data_bus->open_value = data_bus->A_Bus.memory->WRAM[WRAM_indexer(addr)];
+		data_bus->open_value = data_bus->A_Bus.memory->WRAM[WRAM_lowRAM_mirror_indexer(cartridge_addr)];
 	}
-	else if(IN_WRAM_LOWRAM_MIRROR(addr))
+	else if(IN_REG(cartridge_addr))
 	{
-		data_bus->open_value = data_bus->A_Bus.memory->WRAM[WRAM_lowRAM_mirror_indexer(addr)];
-	}
-	else if(IN_WRAM_LOWRAM_MIRROR(mirror_addr))
-	{
-		data_bus->open_value = data_bus->A_Bus.memory->WRAM[WRAM_lowRAM_mirror_indexer(mirror_addr)];
-	}
-	else if(IN_REG(addr))
-	{
-		read_ppu_register(data_bus, addr);
-		read_wram_register(data_bus, addr);
-		read_cpu_register(data_bus, addr);
+		uint32_t reg_addr = cartridge_addr - 0x800000;
 
-		data_bus->open_value = data_bus->A_Bus.memory->REG[REG_indexer(addr)];
-	}
-	else if(IN_REG(mirror_addr)) 
-	{
-		read_ppu_register(data_bus, mirror_addr);
-		read_wram_register(data_bus, mirror_addr);
-		read_cpu_register(data_bus, mirror_addr);
+		read_ppu_register(data_bus, reg_addr);
+		read_wram_register(data_bus, reg_addr);
+		read_cpu_register(data_bus, reg_addr);
 
-		data_bus->open_value = data_bus->A_Bus.memory->REG[REG_indexer(mirror_addr)];
+		data_bus->open_value = data_bus->A_Bus.memory->REG[REG_indexer(cartridge_addr)];
 	}
 	else if(data_bus->A_Bus.memory->ROM_type_marker == LoROM_MARKER)
 	{
@@ -313,46 +279,25 @@ uint8_t mem_read(struct data_bus *data_bus, uint32_t addr)
 
 void mem_write(struct data_bus *data_bus, uint32_t addr, uint8_t write_val)
 {
-	uint32_t cartridge_addr = addr;
-	uint8_t cartridge_byte = (uint8_t)((addr & 0x00FF0000) >> 16);
+	uint32_t cartridge_addr = convert_to_cartridge_addr(addr);
 
-	if(cartridge_byte < WRAM_BANKS[0])
+	if(IN_WRAM(cartridge_addr))
 	{
-		cartridge_byte = cartridge_byte + 0x80;
+		data_bus->A_Bus.memory->WRAM[WRAM_indexer(cartridge_addr)] = write_val;
+	}
+	else if(IN_WRAM_LOWRAM_MIRROR(cartridge_addr))
+	{
+		data_bus->A_Bus.memory->WRAM[WRAM_lowRAM_mirror_indexer(cartridge_addr)] = write_val;
+	}
+	else if(IN_REG(cartridge_addr))
+	{
+		uint32_t reg_addr = cartridge_addr - 0x800000;
 
-		cartridge_addr = addr & 0x0000FFFF;
-		cartridge_addr |= (0x00000000 | cartridge_byte) << 16;
-	}
+		write_ppu_register(data_bus, reg_addr, write_val);
+		write_wram_register(data_bus, reg_addr, write_val);
+		write_cpu_register(data_bus, reg_addr, write_val);
 
-	uint32_t mirror_addr = (addr & 0x0000FFFF);
-	uint8_t mirror_byte = (uint8_t)((addr & 0x00FF0000) >> 16) + 0x80;
-	mirror_addr |= ((0x00000000 | mirror_byte) << 16);
-
-	if(IN_WRAM(addr))
-	{
-		data_bus->A_Bus.memory->WRAM[WRAM_indexer(addr)] = write_val;
-	}
-	else if(IN_WRAM_LOWRAM_MIRROR(addr))
-	{
-		data_bus->A_Bus.memory->WRAM[WRAM_lowRAM_mirror_indexer(addr)] = write_val;
-	}
-	else if(IN_WRAM_LOWRAM_MIRROR(mirror_addr))
-	{
-		data_bus->A_Bus.memory->WRAM[WRAM_lowRAM_mirror_indexer(mirror_addr)] = write_val;
-	}
-	else if(IN_REG(addr))
-	{
-		write_ppu_register(data_bus, addr, write_val);
-		write_wram_register(data_bus, addr, write_val);
-		write_cpu_register(data_bus, addr, write_val);
-		data_bus->A_Bus.memory->REG[REG_indexer(addr)] = write_val;
-	}
-	else if(IN_REG(mirror_addr)) 
-	{
-		write_ppu_register(data_bus, mirror_addr, write_val);
-		write_wram_register(data_bus, mirror_addr, write_val);
-		write_cpu_register(data_bus, mirror_addr, write_val);
-		data_bus->A_Bus.memory->REG[REG_indexer(mirror_addr)] = write_val;
+		data_bus->A_Bus.memory->REG[REG_indexer(cartridge_addr)] = write_val;
 	}
 	else if(data_bus->A_Bus.memory->ROM_type_marker == LoROM_MARKER)
 	{

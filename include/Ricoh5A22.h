@@ -447,6 +447,7 @@ struct Ricoh_5A22
 
 	int NMI_line;
 	int IRQ_line;
+	int REFRESH;
 
 	struct 
 	{

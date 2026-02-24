@@ -10,6 +10,7 @@
 #include "memory.h"
 #include "DMA.h"
 #include "cartridge.h"
+#include "utility.h"
 
 int main(int argc, char *argv[])
 {
@@ -70,7 +71,7 @@ int main(int argc, char *argv[])
 	while(!cpu.LPM)
 	{
 		cpu.NMI_line = !(cpu.internal_registers.NMIEN & cpu.internal_registers.NMI_flag);
-		cpu.IRQ_line = !((cpu.internal_registers.IRQEN != DISABLE) & cpu.internal_registers.IRQ_flag);
+		cpu.IRQ_line = !((cpu.internal_registers.IRQEN != DISABLE) & cpu.internal_registers.IRQ_flag) || check_bit8(cpu.cpu_status, CPU_STATUS_I);
 
 		if(cpu.queued_cyles == 0)
 		{
@@ -83,6 +84,13 @@ int main(int argc, char *argv[])
 			{
 				execute(&data_bus, instruction);
 				loop_state = Empty;
+			}
+
+			if(cpu.REFRESH)
+			{
+				cpu.queued_cyles += 40;
+
+				cpu.REFRESH = 0;
 			}
 		}
 

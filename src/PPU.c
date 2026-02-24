@@ -1,43 +1,19 @@
 #include "PPU.h"
 #include "memory.h"
-#include "ricoh5A22.h"
-#include "registers.h"
+#include "utility.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 
-#define LE_HBYTE16(u16) (uint8_t)((u16 & 0xFF00) >> 8)
-#define LE_LBYTE16(u16) (uint8_t)(u16 & 0x00FF)
-
-#define SWP_LE_LBYTE16(u16, u8) ((u16 & 0xFF00) | u8)
-#define SWP_LE_HBYTE16(u16, u8) ((u16 & 0x00FF) | ((0x0000 | u8) << 8))
-#define LE_COMBINE_2BYTE(b1, b2) (uint16_t)(((0x0000 | b2) << 8) | b1)
-
-// static uint8_t check_bit8(uint8_t ps, uint8_t mask)
-// {
-// 	if((ps & mask) == mask)
-// 	{
-// 		return 0x01;
-// 	}
-//
-// 	return 0x00;
-// }
-
-static uint8_t check_bit16(uint16_t ps, uint16_t mask)
-{
-	if((ps & mask) == mask)
-	{
-		return 0x01;
-	}
-
-	return 0x00;
-}
-
 void init_ppu(struct PPU *ppu)
 {
-	ppu->pixel_buf = malloc(DOTS * LINES * sizeof(Color_t));
+	ppu->pixel_buf = malloc(DOTS * LINES * sizeof(uint8_t) * 3);
 	ppu->x = 0;
 	ppu->y = 0;
+
+	ppu->active_scan = 0;
+	ppu->active_x = 0;
+	ppu->active_y = 0;
 
 	ppu->queued_cycles = 0;
 }
@@ -106,8 +82,8 @@ void M0_dot(struct data_bus *data_bus)
 
 	uint16_t VRAM_addr = ppu->BGn_tilemap_info.tilemap_vram_addr[layer] << 10;
 
-	uint16_t screen_x = (ppu->y - HIDE_LINES) + ppu->BG_scroll_offset.BGn_horizontal_offset[layer];
-	uint16_t screen_y = (ppu->x - HIDE_DOTS) + ppu->BG_scroll_offset.BGn_vertical_offset[layer];
+	uint16_t screen_x = ppu->active_x + ppu->BG_scroll_offset.BGn_horizontal_offset[layer];
+	uint16_t screen_y = ppu->active_x + ppu->BG_scroll_offset.BGn_vertical_offset[layer];
 
 	if(ppu->BGn_character_size[layer] == CH_SIZE_8x8)
 	{
@@ -126,34 +102,26 @@ void M0_dot(struct data_bus *data_bus)
 		struct tilemap tile;
 		get_tile(&tile, data_bus, VRAM_addr, ppu->BGn_chr_tiles_offset[layer]);
 
-		Color_t tiledata[64];
-
-		for(int row = 0; row < 8; row++)
-		{
-			uint16_t bitplane = read_VRAM(data_bus, tile.tile_addr + row);
-
-			for(uint8_t p = 0; p < 8; p++)
-			{
-				int palette_index = (check_bit16(bitplane, 0x10 << p) << 1) | check_bit16(bitplane, 0x01 << p);
-				uint16_t color_data = read_CGRAM(data_bus, palette_index + (tile.palette * 4));
-
-				rgba_from_CGRAM(&tiledata[(row * 8) + p], color_data);
-
-				if(palette_index == 0)
-				{
-					tiledata[(row * 8) + p].a = 0;
-				}
-				else 
-				{
-					tiledata[(row * 8) + p].a = 0xFF;
-				}
-			}
-		}
-
 		int tile_x = screen_x % 8;
 		int tile_y = screen_y % 8;
 
-		ppu->pixel_buf[(screen_y * DOTS) + screen_x] = tiledata[(tile_y * 8) + tile_x];
+		uint16_t bitplane = read_VRAM(data_bus, tile.tile_addr + tile_y);
+		int hi_bit = check_bit16(bitplane, 0x0100 << tile_x);
+		int lo_bit = check_bit16(bitplane, 0x0001 << tile_x);
+		int index = ((0 | hi_bit) << 1) | lo_bit;
+
+		uint16_t CGRAM_addr = (tile.palette * 4) + index;
+		
+		Color_t pixel;
+		rgba_from_CGRAM(&pixel, read_CGRAM(data_bus, CGRAM_addr));
+
+		if(pixel.a)
+		{
+			int index = ((ppu->active_y * VISIBLE_DOTS) + ppu->active_x) * 3;
+			ppu->pixel_buf[index] = pixel.r;
+			ppu->pixel_buf[index + 1] = pixel.g;
+			ppu->pixel_buf[index + 2] = pixel.b;
+		}
 	}
 	else if(ppu->BGn_character_size[layer] == CH_SIZE_16x16)
 	{
@@ -171,11 +139,39 @@ void M0_dot(struct data_bus *data_bus)
 
 		struct tilemap tile;
 		get_tile(&tile, data_bus, VRAM_addr, ppu->BGn_chr_tiles_offset[layer]);
-		//
-		// uint16_t bitplane1 = read_VRAM(data_bus, tile.tile_addr);
-		// uint16_t bitplane2 = read_VRAM(data_bus, tile.tile_addr + 1);
-		// uint16_t bitplane3 = read_VRAM(data_bus, tile.tile_addr + TILESET_ROW_SIZE);
-		// uint16_t bitplane4 = read_VRAM(data_bus, tile.tile_addr + TILESET_ROW_SIZE + 1);
+
+		int tile_x = screen_x % 16;
+		int tile_y = screen_y % 16;
+
+		uint16_t adjusted_tile_addr = tile.tile_addr;
+
+		if(tile_x >= 8)
+		{
+			adjusted_tile_addr++;
+		}
+
+		if(tile_y >= 8)
+		{
+			adjusted_tile_addr += TILESET_ROW_SIZE;
+		}
+
+		uint16_t bitplane = read_VRAM(data_bus, adjusted_tile_addr + tile_y);
+		int hi_bit = check_bit16(bitplane, 0x0100 << tile_x);
+		int lo_bit = check_bit16(bitplane, 0x0001 << tile_x);
+		int index = ((0 | hi_bit) << 1) | lo_bit;
+
+		uint16_t CGRAM_addr = (tile.palette * 4) + index;
+
+		Color_t pixel;
+		rgba_from_CGRAM(&pixel, read_CGRAM(data_bus, CGRAM_addr));
+
+		if(pixel.a)
+		{
+			int index = ((ppu->active_y * VISIBLE_DOTS) + ppu->active_x) * 3;
+			ppu->pixel_buf[index] = pixel.r;
+			ppu->pixel_buf[index + 1] = pixel.g;
+			ppu->pixel_buf[index + 2] = pixel.b;
+		}
 	}
 }
 
@@ -189,13 +185,82 @@ void short_dot(struct data_bus *data_bus)
 	data_bus->B_bus.ppu->ppu->queued_cycles += 4;
 }
 
-#define exit_hblank(x) (x == HIDE_DOTS)
-#define enter_hblank(x) (x == VISIBLE_DOTS + HIDE_DOTS)
-#define exit_line(x) (x >= DOTS)
+int enter_hblank(struct data_bus *data_bus)
+{
+	struct PPU *ppu = data_bus->B_bus.ppu->ppu;
 
-#define exit_vblank(y) (y == HIDE_LINES)
-#define enter_vblank(y) (y == VISIBLE_LINES + HIDE_LINES)
-#define exit_screen(y) (y >= LINES)
+	if(ppu->x == HIDE_DOTS + VISIBLE_DOTS)
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
+int enter_vblank(struct data_bus *data_bus)
+{
+	struct PPU *ppu = data_bus->B_bus.ppu->ppu;
+
+	if(ppu->x == 0 && ppu->y == 0xF0 && ppu->overscan)
+	{
+		return 1;
+	}
+
+	if(ppu->x == 0 && ppu->y == 0xE1 && !ppu->overscan)
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
+int exit_vblank(struct data_bus *data_bus)
+{
+	struct PPU *ppu = data_bus->B_bus.ppu->ppu;
+
+	if(ppu->x == 0 && ppu->y == 0)
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
+int exit_hblank(struct data_bus *data_bus)
+{
+	struct PPU *ppu = data_bus->B_bus.ppu->ppu;
+
+	if(ppu->x == HIDE_DOTS)
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
+int exit_screen(struct data_bus *data_bus)
+{
+	struct PPU *ppu = data_bus->B_bus.ppu->ppu;
+
+	if(ppu->y >= LINES)
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
+int exit_line(struct data_bus *data_bus)
+{
+	struct PPU *ppu = data_bus->B_bus.ppu->ppu;
+
+	if(ppu->x >= DOTS)
+	{
+		return 1;
+	}
+
+	return 0;
+}
 
 void move_beam(struct data_bus *data_bus)
 {
@@ -203,30 +268,40 @@ void move_beam(struct data_bus *data_bus)
 
 	ppu->x++;
 
-	if(exit_hblank(ppu->x))
+	if(ppu->active_scan)
 	{
-		clear_hblank(data_bus);
+		ppu->active_x++;
 	}
 
-	if(enter_hblank(ppu->x))
+	if(exit_hblank(data_bus))
+	{
+		clear_hblank(data_bus);
+
+		ppu->active_scan = 1;
+		ppu->active_x = 0;
+		ppu->active_y++;
+	}
+
+	if(enter_hblank(data_bus))
 	{
 		signal_hblank(data_bus);
 
 		ppu->queued_cycles += 68;
+		ppu->active_scan = 0;
 	}
 
-	if(exit_line(ppu->x))
+	if(exit_line(data_bus))
 	{
 		ppu->y++;
 		ppu->x = 0;
 	}
 
-	if(enter_vblank(ppu->y))
+	if(enter_vblank(data_bus))
 	{
 		signal_vblank(data_bus);
 	}
 
-	if(exit_vblank(ppu->y))
+	if(exit_vblank(data_bus))
 	{
 		clear_vblank(data_bus);
 
@@ -234,9 +309,11 @@ void move_beam(struct data_bus *data_bus)
 		ppu->time_over = 0;
 
 		ppu->interlace_field = ~ppu->interlace_field;
+
+		ppu->active_y = 0;
 	}
 
-	if(exit_screen(ppu->y))
+	if(exit_screen(data_bus))
 	{
 		ppu->y = 0;
 	}
@@ -253,6 +330,11 @@ void ppu_dot(struct data_bus *data_bus)
 	else 
 	{
 		short_dot(data_bus);
+	}
+
+	if(ppu->x == 536 / 4)
+	{
+		set_refresh(data_bus);
 	}
 
 	if(ppu->BG_mode == 0)

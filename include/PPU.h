@@ -75,7 +75,7 @@ typedef struct
 
 struct PPU
 {
-	Color_t *pixel_buf;
+	uint8_t *pixel_buf;
 
 	int F_blank;
 	uint8_t brightness;
@@ -226,6 +226,8 @@ struct PPU
 	uint8_t PPU2_bus;
 
 	int x, y;
+	int active_scan;
+	int active_x, active_y;
 	int queued_cycles;
 };
 

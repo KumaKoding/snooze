@@ -73,6 +73,10 @@
 #define WMADDM 0x002182
 #define WMADDH 0x002183
 
+#define JOYOUT 0x4016
+#define JOYSER0 0x4016
+#define JOYSER1 0x4017
+
 #define NMITIEN 0x4200
 #define WRIO 0x4201
 #define WRMPYA 0x4202

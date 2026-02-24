@@ -5,34 +5,34 @@
 #include "registers.h"
 #include "memory.h"
 
-// void init_DMA(struct data_bus *data_bus)
-// {
-// 	mem_write(data_bus, MDMAEN, 0x00);
-// 	mem_write(data_bus, HDMAEN, 0x00);
-//
-// 	for(int i = 0; i < N_CHANNELS; i++)
-// 	{
-// 		mem_write(data_bus, swap_channels(DMA_PARAMETER, i), 0xFF);
-//
-// 		mem_write(data_bus, swap_channels(B_BUS_ADDR, i), 0xFF);
-//
-// 		mem_write(data_bus, swap_channels(A1_TRANSFER_ADDR[0], i), 0xFF);
-// 		mem_write(data_bus, swap_channels(A1_TRANSFER_ADDR[1], i), 0xFF);
-// 		mem_write(data_bus, swap_channels(A1_TRANSFER_ADDR[2], i), 0xFF);
-//
-// 		mem_write(data_bus, swap_channels(HDMA_CURRENT_EFF_ADDR[0], i), 0xFF);
-// 		mem_write(data_bus, swap_channels(HDMA_CURRENT_EFF_ADDR[1], i), 0xFF);
-// 		mem_write(data_bus, swap_channels(HDMA_CURRENT_EFF_ADDR[2], i), 0xFF);
-//
-// 		mem_write(data_bus, swap_channels(HDMA_TABBLE_ADDR[0], i), 0xFF);
-// 		mem_write(data_bus, swap_channels(HDMA_TABBLE_ADDR[1], i), 0xFF);
-//
-// 		mem_write(data_bus, swap_channels(HDMA_REPEAT_SCANLINE_CTR, i), 0xFF);
-//
-// 		mem_write(data_bus, swap_channels(UNUSED_BYTES[0], i), 0xFF);
-// 		mem_write(data_bus, swap_channels(UNUSED_BYTES[1], i), 0xFF);
-// 	}
-// }
+void init_DMA(struct data_bus *data_bus)
+{
+	mem_write(data_bus, MDMAEN, 0x00);
+	mem_write(data_bus, HDMAEN, 0x00);
+
+	for(int i = 0; i < N_CHANNELS; i++)
+	{
+		mem_write(data_bus, swap_channels(DMAPx, i), 0xFF);
+
+		mem_write(data_bus, swap_channels(BBADx, i), 0xFF);
+
+		mem_write(data_bus, swap_channels(A1TxL, i), 0xFF);
+		mem_write(data_bus, swap_channels(A1TxH, i), 0xFF);
+		mem_write(data_bus, swap_channels(A1Bx, i), 0xFF);
+
+		mem_write(data_bus, swap_channels(DASxL, i), 0xFF);
+		mem_write(data_bus, swap_channels(DASxH, i), 0xFF);
+		mem_write(data_bus, swap_channels(DASBx, i), 0xFF);
+
+		mem_write(data_bus, swap_channels(A2AxL, i), 0xFF);
+		mem_write(data_bus, swap_channels(A2AxH, i), 0xFF);
+
+		mem_write(data_bus, swap_channels(NLTRx, i), 0xFF);
+
+		mem_write(data_bus, swap_channels(UNUSED1, i), 0xFF);
+		mem_write(data_bus, swap_channels(UNUSED2, i), 0xFF);
+	}
+}
 //
 // void MDMA_detect_parameters(struct data_bus *data_bus, int channel)
 // {
