@@ -472,9 +472,6 @@ struct Ricoh_5A22
 		uint16_t horizontal_IRQ_target;
 		uint16_t vertical_IRQ_target;
 
-		int MDMA_enable[8];
-		int HDMA_enable[8];
-
 		int fast_ROM;
 
 		int NMI_flag;

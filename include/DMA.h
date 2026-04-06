@@ -35,6 +35,8 @@ enum Direction
 
 struct DMA
 {
+	int MDMA_enable[8];
+	int HDMA_enable[8];
 	enum Pattern transfer_pattern[N_CHANNELS];
 	enum Direction direction[N_CHANNELS];
 	uint32_t DMA_B_addr[N_CHANNELS];
@@ -49,6 +51,8 @@ struct DMA
 	uint8_t HDMA_scanline_counter[8];
 	int HDMA_indirect[N_CHANNELS];
 	int HDMA_repeat[N_CHANNELS];
+
+	int elapsed_cycles;
 };
 
 // DMA ADDRESSES

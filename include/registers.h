@@ -122,5 +122,7 @@
 #define UNUSED1 0x430B 
 #define UNUSED2 0x430F
 #define swap_channels(addr, n) (addr & 0xFFFFFF0F) | (n << 4) 
+#define get_channel(addr) ((addr & 0x000000F0) >> 4)
+#define in_DMA_addr(addr, dma_addr) ((addr & 0xFFFFFF0F) == dma_addr)
 
 #endif // REGISTERS_H

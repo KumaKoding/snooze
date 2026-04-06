@@ -85,30 +85,6 @@ void write_cpu_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_
 		cpu->internal_registers.vertical_IRQ_target= SWP_LE_HBYTE16(cpu->internal_registers.vertical_IRQ_target, write_value);
 	}
 
-	if(addr == MDMAEN)
-	{
-		cpu->internal_registers.MDMA_enable[7] = check_bit8(write_value, 0x80);
-		cpu->internal_registers.MDMA_enable[6] = check_bit8(write_value, 0x40);
-		cpu->internal_registers.MDMA_enable[5] = check_bit8(write_value, 0x20);
-		cpu->internal_registers.MDMA_enable[4] = check_bit8(write_value, 0x10);
-		cpu->internal_registers.MDMA_enable[3] = check_bit8(write_value, 0x08);
-		cpu->internal_registers.MDMA_enable[2] = check_bit8(write_value, 0x04);
-		cpu->internal_registers.MDMA_enable[1] = check_bit8(write_value, 0x02);
-		cpu->internal_registers.MDMA_enable[0] = check_bit8(write_value, 0x01);
-	}
-
-	if(addr == HDMAEN)
-	{
-		cpu->internal_registers.HDMA_enable[7] = check_bit8(write_value, 0x80);
-		cpu->internal_registers.HDMA_enable[6] = check_bit8(write_value, 0x40);
-		cpu->internal_registers.HDMA_enable[5] = check_bit8(write_value, 0x20);
-		cpu->internal_registers.HDMA_enable[4] = check_bit8(write_value, 0x10);
-		cpu->internal_registers.HDMA_enable[3] = check_bit8(write_value, 0x08);
-		cpu->internal_registers.HDMA_enable[2] = check_bit8(write_value, 0x04);
-		cpu->internal_registers.HDMA_enable[1] = check_bit8(write_value, 0x02);
-		cpu->internal_registers.HDMA_enable[0] = check_bit8(write_value, 0x01);
-	}
-
 	if(addr == MEMSEL)
 	{
 		cpu->internal_registers.fast_ROM = check_bit8(write_value, 0x01);

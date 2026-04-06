@@ -92,6 +92,7 @@ void DB_write(struct data_bus *data_bus, uint32_t addr, uint8_t write_val)
 		{
 			cpu->queued_cyles += MEDIUM_ACCESS;
 		}
+
 	}	mem_write(data_bus, addr, write_val);
 }
 
