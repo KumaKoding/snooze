@@ -17,6 +17,7 @@ uint8_t DB_read(struct data_bus *data_bus, uint32_t addr)
 	if(IN_WRAM(cartridge_addr) || IN_WRAM_LOWRAM_MIRROR(cartridge_addr))
 	{
 		cpu->queued_cyles += MEDIUM_ACCESS;
+		sync_DMA(data_bus, MEDIUM_ACCESS);
 	} 
 	else if(IN_REG(cartridge_addr))
 	{
@@ -25,10 +26,12 @@ uint8_t DB_read(struct data_bus *data_bus, uint32_t addr)
 		if(0x4000 <= reg_addr && reg_addr <= 0x41FF)
 		{
 			cpu->queued_cyles += SLOW_ACCESS;
+			sync_DMA(data_bus, SLOW_ACCESS);
 		}
 		else
 		{
 			cpu->queued_cyles += FAST_ACCESS;
+			sync_DMA(data_bus, FAST_ACCESS);
 		}
 	}
 	if(data_bus->A_Bus.memory->ROM_type_marker == LoROM_MARKER)
@@ -38,15 +41,18 @@ uint8_t DB_read(struct data_bus *data_bus, uint32_t addr)
 			if(cpu->internal_registers.fast_ROM && 0x80 <= addr && addr <= 0xFF)
 			{
 				cpu->queued_cyles += FAST_ACCESS;
+				sync_DMA(data_bus, FAST_ACCESS);
 			}
 			else 
 			{
 				cpu->queued_cyles += MEDIUM_ACCESS;
+				sync_DMA(data_bus, MEDIUM_ACCESS);
 			}
 		}
 		else if(IN_LoROM_SRAM(cartridge_addr) || IN_LoROM_SRAM_MIRROR(cartridge_addr))
 		{
 			cpu->queued_cyles += MEDIUM_ACCESS;
+			sync_DMA(data_bus, MEDIUM_ACCESS);
 		}
 	}
 
@@ -61,6 +67,7 @@ void DB_write(struct data_bus *data_bus, uint32_t addr, uint8_t write_val)
 	if(IN_WRAM(cartridge_addr) || IN_WRAM_LOWRAM_MIRROR(cartridge_addr))
 	{
 		cpu->queued_cyles += MEDIUM_ACCESS;
+		sync_DMA(data_bus, MEDIUM_ACCESS);
 	} 
 	else if(IN_REG(cartridge_addr))
 	{
@@ -69,10 +76,12 @@ void DB_write(struct data_bus *data_bus, uint32_t addr, uint8_t write_val)
 		if(0x4000 <= reg_addr && reg_addr <= 0x41FF)
 		{
 			cpu->queued_cyles += SLOW_ACCESS;
+			sync_DMA(data_bus, SLOW_ACCESS);
 		}
 		else
 		{
 			cpu->queued_cyles += FAST_ACCESS;
+			sync_DMA(data_bus, FAST_ACCESS);
 		}
 	}
 	if(data_bus->A_Bus.memory->ROM_type_marker == LoROM_MARKER)
@@ -82,15 +91,18 @@ void DB_write(struct data_bus *data_bus, uint32_t addr, uint8_t write_val)
 			if(cpu->internal_registers.fast_ROM && 0x80 <= addr && addr <= 0xFF)
 			{
 				cpu->queued_cyles += FAST_ACCESS;
+				sync_DMA(data_bus, FAST_ACCESS);
 			}
 			else 
 			{
 				cpu->queued_cyles += MEDIUM_ACCESS;
+				sync_DMA(data_bus, MEDIUM_ACCESS);
 			}
 		}
 		else if(IN_LoROM_SRAM(cartridge_addr) || IN_LoROM_SRAM_MIRROR(cartridge_addr))
 		{
 			cpu->queued_cyles += MEDIUM_ACCESS;
+			sync_DMA(data_bus, MEDIUM_ACCESS);
 		}
 
 	}	mem_write(data_bus, addr, write_val);

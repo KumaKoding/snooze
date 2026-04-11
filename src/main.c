@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 	}
 	reset_ricoh_5a22(&data_bus);
 	init_s_ppu(&s_ppu);
-	// init_DMA(&data_bus);
+	init_DMA(&data_bus);
 
 
 	// SDL_Init(SDL_INIT_VIDEO);
@@ -61,6 +61,7 @@ int main(int argc, char *argv[])
 	// SDL_DestroyWindow(Window);
 	// SDL_Quit();
 
+	int DMA_alignment_counter = 0;
 	uint8_t instruction = 0x00;
 	enum 
 	{
@@ -73,7 +74,7 @@ int main(int argc, char *argv[])
 		cpu.NMI_line = !(cpu.internal_registers.NMIEN & cpu.internal_registers.NMI_flag);
 		cpu.IRQ_line = !((cpu.internal_registers.IRQEN != DISABLE) & cpu.internal_registers.IRQ_flag) || check_bit8(cpu.cpu_status, CPU_STATUS_I);
 
-		if(cpu.queued_cyles == 0)
+		if(cpu.queued_cyles == 0 && !dma.dma_active)
 		{
 			if(loop_state == Empty)
 			{
@@ -111,9 +112,30 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		DMA_alignment_counter++;
+
+		if(DMA_alignment_counter == 8)
+		{
+			DMA_alignment_counter = 0;
+		}
+
+		if(loop_state == Fetched)
+		{
+			if(dma.queued_cycles == 0)
+			{
+				DMA_transfers(&data_bus, DMA_alignment_counter);
+				cpu.queued_cyles += dma.queued_cycles;
+			}
+		}
+
 		if(cpu.RDY)
 		{
 			cpu.queued_cyles--;
+		}
+
+		if(dma.dma_active)
+		{
+			dma.queued_cycles--;
 		}
 
 		s_ppu.ppu->queued_cycles--;

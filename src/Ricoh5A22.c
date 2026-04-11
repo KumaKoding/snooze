@@ -7,9 +7,48 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+void print_cpu(struct Ricoh_5A22 *cpu)
+{
+	char flags[9];
+
+	flags[0] = check_bit8(cpu->cpu_status, CPU_STATUS_N) ? 'N' : 'n';
+	flags[1] = check_bit8(cpu->cpu_status, CPU_STATUS_V) ? 'V' : 'v';
+	
+	if(check_bit8(cpu->cpu_emulation6502, CPU_STATUS_E))
+	{
+		flags[2] = '1';
+		flags[3] = check_bit8(cpu->cpu_status, CPU_STATUS_B) ? 'B' : 'b';
+	}
+	else 
+	{
+		flags[2] = check_bit8(cpu->cpu_status, CPU_STATUS_M) ? 'M' : 'm';
+		flags[3] = check_bit8(cpu->cpu_status, CPU_STATUS_X) ? 'X' : 'x';
+	}
+
+	flags[4] = check_bit8(cpu->cpu_status, CPU_STATUS_D) ? 'D' : 'd';
+	flags[5] = check_bit8(cpu->cpu_status, CPU_STATUS_I) ? 'I' : 'i';
+	flags[6] = check_bit8(cpu->cpu_status, CPU_STATUS_Z) ? 'Z' : 'z';
+	flags[7] = check_bit8(cpu->cpu_status, CPU_STATUS_C) ? 'C' : 'c';
+	flags[8] = '\0';
+
+	printf
+		(
+			"%06x A:%04x X:%04x Y:%04x S:%04x D:%04x DB:%02x %s \n", 
+				LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr),
+				cpu->register_A,
+				cpu->register_X,
+				cpu->register_Y,
+				cpu->stack_ptr,
+				cpu->direct_page,
+				cpu->data_bank,
+				flags
+		);
+}
+
 void add_internal_operation(struct data_bus *data_bus)
 {
 	data_bus->A_Bus.cpu->queued_cyles += 6;
+	sync_DMA(data_bus, 6);
 }
 
 void swap_cpu_status(struct Ricoh_5A22 *cpu, uint8_t new_flags)
@@ -2959,7 +2998,7 @@ uint8_t fetch(struct data_bus *data_bus)
 }
 
 
-#define DEBUG_OPCODES 1
+#define DEBUG_OPCODES 0
 
 void execute(struct data_bus *data_bus, uint8_t instruction)
 {
@@ -5241,44 +5280,6 @@ void execute(struct data_bus *data_bus, uint8_t instruction)
 	}
 }
 
-void print_cpu(struct Ricoh_5A22 *cpu)
-{
-	char flags[9];
-
-	flags[0] = check_bit8(cpu->cpu_status, CPU_STATUS_N) ? 'N' : 'n';
-	flags[1] = check_bit8(cpu->cpu_status, CPU_STATUS_V) ? 'V' : 'v';
-	
-	if(check_bit8(cpu->cpu_emulation6502, CPU_STATUS_E))
-	{
-		flags[2] = '1';
-		flags[3] = check_bit8(cpu->cpu_status, CPU_STATUS_B) ? 'B' : 'b';
-	}
-	else 
-	{
-		flags[2] = check_bit8(cpu->cpu_status, CPU_STATUS_M) ? 'M' : 'm';
-		flags[3] = check_bit8(cpu->cpu_status, CPU_STATUS_X) ? 'X' : 'x';
-	}
-
-	flags[4] = check_bit8(cpu->cpu_status, CPU_STATUS_D) ? 'D' : 'd';
-	flags[5] = check_bit8(cpu->cpu_status, CPU_STATUS_I) ? 'I' : 'i';
-	flags[6] = check_bit8(cpu->cpu_status, CPU_STATUS_Z) ? 'Z' : 'z';
-	flags[7] = check_bit8(cpu->cpu_status, CPU_STATUS_C) ? 'C' : 'c';
-	flags[8] = '\0';
-
-	printf
-		(
-			"%06x A:%04x X:%04x Y:%04x S:%04x D:%04x DB:%02x %s \n", 
-				LE_COMBINE_BANK_SHORT(cpu->program_bank, cpu->program_ctr),
-				cpu->register_A,
-				cpu->register_X,
-				cpu->register_Y,
-				cpu->stack_ptr,
-				cpu->direct_page,
-				cpu->data_bank,
-				flags
-		);
-}
-
 void reset_ricoh_5a22(struct data_bus *data_bus)
 {
 	struct Ricoh_5A22 *cpu = data_bus->A_Bus.cpu;
@@ -5286,6 +5287,11 @@ void reset_ricoh_5a22(struct data_bus *data_bus)
 	cpu->data_bank = 0x00;
 	cpu->program_bank = 0x00;
 	cpu->direct_page = 0x0000;
+
+	cpu->register_A = 0x0000;
+	cpu->register_X = 0x0000;
+	cpu->register_Y = 0x0000;
+	cpu->stack_ptr = 0x01ff;
 
 	cpu->program_ctr = LE_COMBINE_2BYTE(mem_read(data_bus, RESET_VECTOR_6502[0]), mem_read(data_bus, RESET_VECTOR_6502[1]));
 

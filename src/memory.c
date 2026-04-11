@@ -7,6 +7,8 @@
 void init_memory(struct Memory *memory, uint8_t ROM_type_marker)
 {
 	memory->ROM_type_marker = ROM_type_marker;
+
+	memory->WRAM_addr = 0;
 	memory->WRAM = malloc(WRAM_SIZE * sizeof(uint8_t));
 	memory->REG = malloc(REG_SIZE * sizeof(uint8_t));
 
@@ -243,6 +245,7 @@ uint8_t mem_read(struct data_bus *data_bus, uint32_t addr)
 		read_ppu_register(data_bus, reg_addr);
 		read_wram_register(data_bus, reg_addr);
 		read_cpu_register(data_bus, reg_addr);
+		read_dma_register(data_bus, reg_addr);
 
 		data_bus->open_value = data_bus->A_Bus.memory->REG[REG_indexer(cartridge_addr)];
 	}
@@ -296,6 +299,7 @@ void mem_write(struct data_bus *data_bus, uint32_t addr, uint8_t write_val)
 		write_ppu_register(data_bus, reg_addr, write_val);
 		write_wram_register(data_bus, reg_addr, write_val);
 		write_cpu_register(data_bus, reg_addr, write_val);
+		write_dma_register(data_bus, reg_addr, write_val);
 
 		data_bus->A_Bus.memory->REG[REG_indexer(cartridge_addr)] = write_val;
 	}

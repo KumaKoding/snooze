@@ -20,7 +20,7 @@ void init_ppu(struct PPU *ppu)
 
 void init_ppu_memory(struct PPU_memory *ppu_memory)
 {
-	ppu_memory->VRAM = malloc(VRAM_WORD_WIDTH * 2);
+	ppu_memory->VRAM = malloc(VRAM_WORDS * VRAM_WORD_WIDTH);
 	ppu_memory->OAM_high_table = malloc(OAM_HTABLE_BYTES);
 	ppu_memory->OAM_low_table = malloc(OAM_LTABLE_BYTES);
 	ppu_memory->CGRAM = malloc(CGRAM_WORDS * 2);
@@ -70,6 +70,7 @@ void rgba_from_CGRAM(Color_t *color, uint16_t cg)
 	color->r = r;
 	color->g = g;
 	color->b = b;
+	color->a = 0xFF;
 }
 
 void M0_dot(struct data_bus *data_bus)
@@ -111,7 +112,8 @@ void M0_dot(struct data_bus *data_bus)
 		int index = ((0 | hi_bit) << 1) | lo_bit;
 
 		uint16_t CGRAM_addr = (tile.palette * 4) + index;
-		
+		// the VRAM malloc() was too small, so there was always a heap buffer overflow which corrupted the other stuff causing invalid addresses
+
 		Color_t pixel;
 		rgba_from_CGRAM(&pixel, read_CGRAM(data_bus, CGRAM_addr));
 
@@ -121,6 +123,8 @@ void M0_dot(struct data_bus *data_bus)
 			ppu->pixel_buf[index] = pixel.r;
 			ppu->pixel_buf[index + 1] = pixel.g;
 			ppu->pixel_buf[index + 2] = pixel.b;
+
+			printf("%02x %02x %02x\n", pixel.r, pixel.g, pixel.b);
 		}
 	}
 	else if(ppu->BGn_character_size[layer] == CH_SIZE_16x16)
@@ -159,8 +163,11 @@ void M0_dot(struct data_bus *data_bus)
 		int hi_bit = check_bit16(bitplane, 0x0100 << tile_x);
 		int lo_bit = check_bit16(bitplane, 0x0001 << tile_x);
 		int index = ((0 | hi_bit) << 1) | lo_bit;
+		printf("%d\n", index);
 
 		uint16_t CGRAM_addr = (tile.palette * 4) + index;
+
+		//somethings messing with the actual pointer to the ppu
 
 		Color_t pixel;
 		rgba_from_CGRAM(&pixel, read_CGRAM(data_bus, CGRAM_addr));
@@ -218,7 +225,7 @@ int exit_vblank(struct data_bus *data_bus)
 {
 	struct PPU *ppu = data_bus->B_bus.ppu->ppu;
 
-	if(ppu->x == 0 && ppu->y == 0)
+	if(ppu->x >= DOTS && ppu->y >= LINES)
 	{
 		return 1;
 	}
@@ -273,32 +280,18 @@ void move_beam(struct data_bus *data_bus)
 		ppu->active_x++;
 	}
 
-	if(exit_hblank(data_bus))
+	if(enter_vblank(data_bus))
 	{
-		clear_hblank(data_bus);
-
-		ppu->active_scan = 1;
-		ppu->active_x = 0;
-		ppu->active_y++;
+		signal_vblank(data_bus);
 	}
 
 	if(enter_hblank(data_bus))
 	{
 		signal_hblank(data_bus);
+		allow_HDMA(data_bus);
 
 		ppu->queued_cycles += 68;
 		ppu->active_scan = 0;
-	}
-
-	if(exit_line(data_bus))
-	{
-		ppu->y++;
-		ppu->x = 0;
-	}
-
-	if(enter_vblank(data_bus))
-	{
-		signal_vblank(data_bus);
 	}
 
 	if(exit_vblank(data_bus))
@@ -313,9 +306,28 @@ void move_beam(struct data_bus *data_bus)
 		ppu->active_y = 0;
 	}
 
-	if(exit_screen(data_bus))
+	if(exit_hblank(data_bus))
 	{
-		ppu->y = 0;
+		clear_hblank(data_bus);
+		disallow_HDMA(data_bus);
+
+		ppu->active_scan = 1;
+		ppu->active_x = 0;
+		ppu->active_y++;
+	}
+
+	if(exit_line(data_bus))
+	{
+		if(exit_screen(data_bus))
+		{
+			ppu->y = 0;
+		}
+		else 
+		{
+			ppu->y++;
+		}
+
+		ppu->x = 0;
 	}
 }
 
@@ -341,6 +353,7 @@ void ppu_dot(struct data_bus *data_bus)
 	{
 		M0_dot(data_bus);
 	}
+
 
 	check_IRQ(data_bus);
 	move_beam(data_bus);

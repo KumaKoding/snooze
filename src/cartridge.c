@@ -36,14 +36,14 @@ void load_ROM(const char *filename, struct data_bus *data_bus)
 		}
 	}
 
-	printf("TITLE: ");
-
-	for(int i = 0; i < 21; i++)
-	{
-		printf("%c", mem_read(data_bus, 0x00FFC0 + i));
-	}
-
-	printf("\n");
-
-	printf("SIZE: %llu\n", ROM_info.st_size);
+	// printf("TITLE: ");
+	//
+	// for(int i = 0; i < 21; i++)
+	// {
+	// 	printf("%c", mem_read(data_bus, 0x00FFC0 + i));
+	// }
+	//
+	// printf("\n");
+	//
+	// printf("SIZE: %llu\n", ROM_info.st_size);
 }

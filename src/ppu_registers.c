@@ -426,7 +426,7 @@ void write_ppu_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_
 	}
 
 	if(addr == VMDATAH)
-	{
+	{	
 		write_VRAM_high(data_bus, ppu->VRAM_addr, write_value);
 
 		if(ppu->VRAM_increment_mode == 1)
