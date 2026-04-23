@@ -443,7 +443,7 @@ void write_ppu_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_
 
 	if(addr == CGDATA)
 	{
-		if(ppu->CGRAM_check)
+		if(!ppu->CGRAM_check)
 		{
 			ppu->CGRAM_latch = write_value;
 			ppu->CGRAM_check = 1;
@@ -451,6 +451,7 @@ void write_ppu_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_
 		else 
 		{
 			write_CGRAM_word(data_bus, ppu->CGRAM_addr, LE_COMBINE_2BYTE(ppu->CGRAM_latch, write_value));
+			ppu->CGRAM_addr++;
 			ppu->CGRAM_check = 0;
 		}
 	}

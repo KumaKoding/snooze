@@ -99,7 +99,6 @@ void write_dma_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_
 		dma->MDMA_enable[2] = check_bit8(write_value, 0x04);
 		dma->MDMA_enable[1] = check_bit8(write_value, 0x02);
 		dma->MDMA_enable[0] = check_bit8(write_value, 0x01);
-		printf("%02x\n", write_value);
 
 		if(write_value != 0x00)
 		{

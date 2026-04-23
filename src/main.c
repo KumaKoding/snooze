@@ -1,16 +1,120 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <sys/stat.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
+#include <time.h>
 
-#include "PPU.h"
-#include "SDL3/SDL.h"
-
-#include "ricoh5A22.h"
+#include "utility.h"
 #include "memory.h"
+#include "ricoh5A22.h"
+#include "PPU.h"
 #include "DMA.h"
 #include "cartridge.h"
-#include "utility.h"
+
+#define SDL_FLAGS SDL_INIT_VIDEO
+
+#define WINDOW_TITLE "snooze"
+#define WINDOW_WIDTH DOTS
+#define WINDOW_HEIGHT LINES
+
+struct Screen 
+{
+	SDL_Window *window;
+	SDL_Renderer *renderer;
+	SDL_Event event;
+	int running;
+};
+
+int screen_init_SDL(struct Screen *screen)
+{
+	if(!SDL_Init(SDL_FLAGS))
+	{
+		fprintf(stderr, "ERROR initializing SDL3: %s\n", SDL_GetError());
+
+		return 0;
+	}
+
+	screen->window = SDL_CreateWindow(WINDOW_TITLE, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_FLAGS);
+
+	if(!screen->window)
+	{
+		fprintf(stderr, "ERROR creating SDL3 window: %s\n", SDL_GetError());
+		
+		return 0;
+	}
+
+	screen->renderer = SDL_CreateRenderer(screen->window, NULL);
+
+	if(!screen->renderer)
+	{
+		fprintf(stderr, "ERROR creating SDL3 renderer: %s\n", SDL_GetError());
+
+		return 0;
+	}
+
+	return 1;
+}
+
+void free_screen(struct Screen *screen)
+{
+	if(screen->window)
+	{
+		SDL_DestroyWindow(screen->window);
+
+		screen->window = NULL;
+	}
+
+	if(screen->renderer)
+	{
+		SDL_DestroyRenderer(screen->renderer);
+
+		screen->renderer = NULL;
+	}
+
+	SDL_Quit();
+}
+
+void run_snooze(struct Screen *screen)
+{
+	SDL_SetRenderDrawColor(screen->renderer, 0, 0, 0, 255);
+
+	while(screen->running)
+	{
+		while(SDL_PollEvent(&screen->event))
+		{
+			switch (screen->event.type) 
+			{
+				case SDL_EVENT_QUIT:
+					screen->running = 0;
+
+					break;
+				default:
+					break;
+			}
+		}
+
+		SDL_RenderClear(screen->renderer);
+
+		SDL_RenderPresent(screen->renderer);
+
+		SDL_Delay(16);
+	}
+}
+
+int init_snooze(struct Screen *screen)
+{
+	screen->running = 1;
+
+	if(!screen_init_SDL(screen))
+	{
+		return EXIT_FAILURE;
+	}
+
+	return EXIT_SUCCESS;
+}
 
 int main(int argc, char *argv[])
 {
@@ -35,31 +139,12 @@ int main(int argc, char *argv[])
 	init_s_ppu(&s_ppu);
 	init_DMA(&data_bus);
 
-
-	// SDL_Init(SDL_INIT_VIDEO);
-	// SDL_Window *Window = SDL_CreateWindow("Snooze", 640, 480, SDL_WINDOW_OPENGL);
 	//
-	// if(Window == NULL)
-	// {
-	// 	printf(":(\n");
-	// }
+	// struct Screen screen = { 0 };
 	//
-	// SDL_Event event;
-	// bool quit = false;
+	// int exit_status = init_snooze(&screen);
 	//
-	// while(!quit)
-	// {
-	// 	while(SDL_PollEvent(&event))
-	// 	{
-	// 		if(event.type == SDL_EVENT_QUIT)
-	// 		{
-	// 			quit = true;
-	// 		}
-	// 	}
-	// }
-	//
-	// SDL_DestroyWindow(Window);
-	// SDL_Quit();
+	// run_snooze(&screen);
 
 	int DMA_alignment_counter = 0;
 	uint8_t instruction = 0x00;
@@ -140,6 +225,12 @@ int main(int argc, char *argv[])
 
 		s_ppu.ppu->queued_cycles--;
 	}
+	
+	
+	// free_screen(&screen);
+
+	// return exit_status;
+	
 
 	return 0;
 }

@@ -58,19 +58,23 @@ void get_tile(struct tilemap *tilemap, struct data_bus *data_bus, uint16_t VRAM_
 
 void rgba_from_CGRAM(Color_t *color, uint16_t cg)
 {
-	const int BITS_PER_CHANNEL= 5;
+	const int BITS_PER_CHANNEL = 5;
+	const int RGB24_SHIFT = 3;
 
 	uint8_t r = cg & 0b11111;
-	r = ((float)r / 0b11111) * 0xFF;
 	uint8_t g = (cg >> BITS_PER_CHANNEL) & 0b11111;
-	g = ((float)g / 0b11111) * 0xFF;
 	uint8_t b = (cg >> (BITS_PER_CHANNEL * 2)) & 0b11111;
-	b = ((float)b / 0b11111) * 0xFF;
+
+	g = g << RGB24_SHIFT;
+	r = r << RGB24_SHIFT;
+	b = b << RGB24_SHIFT;
 
 	color->r = r;
 	color->g = g;
 	color->b = b;
 	color->a = 0xFF;
+
+	printf("%04x %02x %02x %02x\n", cg, r, g, b);
 }
 
 void M0_dot(struct data_bus *data_bus)
@@ -123,8 +127,6 @@ void M0_dot(struct data_bus *data_bus)
 			ppu->pixel_buf[index] = pixel.r;
 			ppu->pixel_buf[index + 1] = pixel.g;
 			ppu->pixel_buf[index + 2] = pixel.b;
-
-			printf("%02x %02x %02x\n", pixel.r, pixel.g, pixel.b);
 		}
 	}
 	else if(ppu->BGn_character_size[layer] == CH_SIZE_16x16)

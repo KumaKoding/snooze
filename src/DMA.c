@@ -220,11 +220,11 @@ void transfer_byte(struct data_bus *data_bus, int channel, int b_offset)
 	switch (dma->direction[channel]) 
 	{
 		case A_to_B:
-			mem_write(data_bus, 0x2100 | dma->DMA_B_addr[channel] + b_offset, dma->DMA_source_addr[channel]);
+			mem_write(data_bus, (0x2100 | dma->DMA_B_addr[channel]) + b_offset, mem_read(data_bus, dma->DMA_source_addr[channel]));
 
 			break;
 		case B_to_A:
-			mem_write(data_bus, dma->DMA_source_addr[channel], 0x2100 | dma->DMA_B_addr[channel] + b_offset);
+			mem_write(data_bus, dma->DMA_source_addr[channel], mem_read(data_bus, (0x2100 | dma->DMA_B_addr[channel]) + b_offset));
 
 			break;
 	}
