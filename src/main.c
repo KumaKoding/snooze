@@ -23,7 +23,6 @@
 struct Screen 
 {
 	SDL_Window *window;
-	SDL_Renderer *renderer;
 	SDL_Event event;
 	int running;
 };
@@ -46,15 +45,6 @@ int screen_init_SDL(struct Screen *screen)
 		return 0;
 	}
 
-	screen->renderer = SDL_CreateRenderer(screen->window, NULL);
-
-	if(!screen->renderer)
-	{
-		fprintf(stderr, "ERROR creating SDL3 renderer: %s\n", SDL_GetError());
-
-		return 0;
-	}
-
 	return 1;
 }
 
@@ -67,19 +57,97 @@ void free_screen(struct Screen *screen)
 		screen->window = NULL;
 	}
 
-	if(screen->renderer)
-	{
-		SDL_DestroyRenderer(screen->renderer);
-
-		screen->renderer = NULL;
-	}
-
 	SDL_Quit();
 }
-
-void run_snooze(struct Screen *screen)
+enum LoopState
 {
-	SDL_SetRenderDrawColor(screen->renderer, 0, 0, 0, 255);
+	Empty,
+	Fetched,
+};
+
+void run_snooze_cycle(struct data_bus *data_bus, SDL_Surface *frame_buffer, enum LoopState *loop_state, uint8_t *instruction)
+{
+	struct Ricoh_5A22 *cpu = data_bus->A_Bus.cpu;
+	struct S_PPU *s_ppu = data_bus->B_bus.ppu;
+	struct DMA *dma = data_bus->B_bus.dma;
+
+	cpu->NMI_line = !(cpu->internal_registers.NMIEN & cpu->internal_registers.NMI_flag);
+	cpu->IRQ_line = !((cpu->internal_registers.IRQEN != DISABLE) & cpu->internal_registers.IRQ_flag) || check_bit8(cpu->cpu_status, CPU_STATUS_I);
+
+	if(cpu->queued_cyles == 0 && !dma->dma_active)
+	{
+		if(*loop_state == Empty)
+		{
+			*instruction = fetch(data_bus);
+			*loop_state = Fetched;
+		}
+		else if(*loop_state == Fetched)
+		{
+			execute(data_bus, *instruction);
+			*loop_state = Empty;
+		}
+
+		if(cpu->REFRESH)
+		{
+			cpu->queued_cyles += 40;
+
+			cpu->REFRESH = 0;
+		}
+	}
+
+	if(s_ppu->ppu->queued_cycles == 0)
+	{
+		ppu_dot(data_bus, frame_buffer);
+	}
+
+	if(*loop_state == Empty)
+	{
+		if(cpu->NMI_line == 0)
+		{
+			hw_nmi(data_bus);
+		}
+		else if(cpu->IRQ_line == 0)
+		{
+			hw_irq(data_bus);
+		}
+	}
+
+	dma->alignment_counter++;
+
+	if(dma->alignment_counter == 8)
+	{
+		dma->alignment_counter = 0;
+	}
+
+	if(*loop_state == Fetched)
+	{
+		if(dma->queued_cycles == 0)
+		{
+			DMA_transfers(data_bus, dma->alignment_counter);
+			cpu->queued_cyles += dma->queued_cycles;
+		}
+	}
+
+	if(cpu->RDY)
+	{
+		cpu->queued_cyles--;
+	}
+
+	if(dma->dma_active)
+	{
+		dma->queued_cycles--;
+	}
+
+	s_ppu->ppu->queued_cycles--;
+}
+
+void run_snooze(struct Screen *screen, struct data_bus *data_bus)
+{
+	SDL_Surface *frame_buffer = SDL_CreateSurface(DOTS, LINES, SDL_PIXELFORMAT_RGB24);
+	SDL_Surface *window_buffer = SDL_GetWindowSurface(screen->window);
+
+	uint8_t instruction = 0x00;
+	enum LoopState loop_state = Empty;
 
 	while(screen->running)
 	{
@@ -96,11 +164,20 @@ void run_snooze(struct Screen *screen)
 			}
 		}
 
-		SDL_RenderClear(screen->renderer);
+		if(!data_bus->A_Bus.cpu->LPM)
+		{
+			run_snooze_cycle(data_bus, frame_buffer, &loop_state, &instruction);
+		}
 
-		SDL_RenderPresent(screen->renderer);
+		if(data_bus->B_bus.ppu->ppu->frame_finished)
+		{
+			printf("DRAW\n");
+			SDL_BlitSurface(frame_buffer, NULL, window_buffer, NULL);
+			SDL_UpdateWindowSurface(screen->window);
 
-		SDL_Delay(16);
+			data_bus->B_bus.ppu->ppu->frame_finished = 0;
+			SDL_Delay(1000 / 60);
+		}
 	}
 }
 
@@ -131,106 +208,24 @@ int main(int argc, char *argv[])
 	data_bus.B_bus.dma = &dma;
 
 	init_memory(&memory, LoROM_MARKER);
+
 	if(argc > 1)
 	{
 		load_ROM(argv[1], &data_bus);
 	}
+
 	reset_ricoh_5a22(&data_bus);
 	init_s_ppu(&s_ppu);
 	init_DMA(&data_bus);
 
-	//
-	// struct Screen screen = { 0 };
-	//
-	// int exit_status = init_snooze(&screen);
-	//
-	// run_snooze(&screen);
+	struct Screen screen = { 0 };
 
-	int DMA_alignment_counter = 0;
-	uint8_t instruction = 0x00;
-	enum 
-	{
-		Empty,
-		Fetched,
-	} loop_state = Empty;
+	int exit_status = init_snooze(&screen);
+	run_snooze(&screen, &data_bus);
 
-	while(!cpu.LPM)
-	{
-		cpu.NMI_line = !(cpu.internal_registers.NMIEN & cpu.internal_registers.NMI_flag);
-		cpu.IRQ_line = !((cpu.internal_registers.IRQEN != DISABLE) & cpu.internal_registers.IRQ_flag) || check_bit8(cpu.cpu_status, CPU_STATUS_I);
+	free_screen(&screen);
 
-		if(cpu.queued_cyles == 0 && !dma.dma_active)
-		{
-			if(loop_state == Empty)
-			{
-				instruction = fetch(&data_bus);
-				loop_state = Fetched;
-			}
-			else if(loop_state == Fetched)
-			{
-				execute(&data_bus, instruction);
-				loop_state = Empty;
-			}
-
-			if(cpu.REFRESH)
-			{
-				cpu.queued_cyles += 40;
-
-				cpu.REFRESH = 0;
-			}
-		}
-
-		if(s_ppu.ppu->queued_cycles == 0)
-		{
-			ppu_dot(&data_bus);
-		}
-
-		if(loop_state == Empty)
-		{
-			if(cpu.NMI_line == 0)
-			{
-				hw_nmi(&data_bus);
-			}
-			else if(cpu.IRQ_line == 0)
-			{
-				hw_irq(&data_bus);
-			}
-		}
-
-		DMA_alignment_counter++;
-
-		if(DMA_alignment_counter == 8)
-		{
-			DMA_alignment_counter = 0;
-		}
-
-		if(loop_state == Fetched)
-		{
-			if(dma.queued_cycles == 0)
-			{
-				DMA_transfers(&data_bus, DMA_alignment_counter);
-				cpu.queued_cyles += dma.queued_cycles;
-			}
-		}
-
-		if(cpu.RDY)
-		{
-			cpu.queued_cyles--;
-		}
-
-		if(dma.dma_active)
-		{
-			dma.queued_cycles--;
-		}
-
-		s_ppu.ppu->queued_cycles--;
-	}
-	
-	
-	// free_screen(&screen);
-
-	// return exit_status;
-	
+	return exit_status;
 
 	return 0;
 }

@@ -7,7 +7,6 @@
 
 void init_ppu(struct PPU *ppu)
 {
-	ppu->pixel_buf = malloc(DOTS * LINES * sizeof(uint8_t) * 3);
 	ppu->x = 0;
 	ppu->y = 0;
 
@@ -16,6 +15,8 @@ void init_ppu(struct PPU *ppu)
 	ppu->active_y = 0;
 
 	ppu->queued_cycles = 0;
+
+	ppu->frame_finished = 0;
 }
 
 void init_ppu_memory(struct PPU_memory *ppu_memory)
@@ -73,11 +74,9 @@ void rgba_from_CGRAM(Color_t *color, uint16_t cg)
 	color->g = g;
 	color->b = b;
 	color->a = 0xFF;
-
-	printf("%04x %02x %02x %02x\n", cg, r, g, b);
 }
 
-void M0_dot(struct data_bus *data_bus)
+void M0_dot(struct data_bus *data_bus, SDL_Surface *frame_buffer)
 {
 	struct PPU *ppu = data_bus->B_bus.ppu->ppu;
 	int layer = 0;
@@ -88,18 +87,25 @@ void M0_dot(struct data_bus *data_bus)
 	uint16_t VRAM_addr = ppu->BGn_tilemap_info.tilemap_vram_addr[layer] << 10;
 
 	uint16_t screen_x = ppu->active_x + ppu->BG_scroll_offset.BGn_horizontal_offset[layer];
-	uint16_t screen_y = ppu->active_x + ppu->BG_scroll_offset.BGn_vertical_offset[layer];
+	uint16_t screen_y = ppu->active_y + ppu->BG_scroll_offset.BGn_vertical_offset[layer];
+
+	if(ppu->active_x == 0)
+	{
+		printf("adflkdjadf\n");
+	}
 
 	if(ppu->BGn_character_size[layer] == CH_SIZE_8x8)
 	{
-		int scaled_x = screen_x / 8;
-		int scaled_y = screen_y / 8;
+		int scaled_x = screen_x / 16; // because we're counting double width for interlacing/high res
+		int scaled_y = screen_y / 16;
 
 		if(scaled_x > TILEMAP_BASE_SIDE)
 		{
 			scaled_x = (scaled_x - TILEMAP_BASE_SIDE);
 			scaled_x += (TILEMAP_BASE_SIDE) * (vertical_tiles * TILEMAP_BASE_SIDE);
+			// printf("%d %d\n", scaled_x, scaled_y);
 		}
+
 
 		VRAM_addr += scaled_x;
 		VRAM_addr += scaled_y * TILEMAP_BASE_SIDE;
@@ -123,10 +129,9 @@ void M0_dot(struct data_bus *data_bus)
 
 		if(pixel.a)
 		{
-			int index = ((ppu->active_y * VISIBLE_DOTS) + ppu->active_x) * 3;
-			ppu->pixel_buf[index] = pixel.r;
-			ppu->pixel_buf[index + 1] = pixel.g;
-			ppu->pixel_buf[index + 2] = pixel.b;
+			// int index = ((ppu->active_y * VISIBLE_DOTS) + ppu->active_x) * 3;
+			// printf("%d:%d - %d %d %d\n", ppu->active_x, ppu->active_y, pixel.r, pixel.g, pixel.b);
+			SDL_WriteSurfacePixel(frame_buffer, ppu->x, ppu->y, pixel.r, pixel.g, pixel.b, pixel.a);
 		}
 	}
 	else if(ppu->BGn_character_size[layer] == CH_SIZE_16x16)
@@ -176,10 +181,7 @@ void M0_dot(struct data_bus *data_bus)
 
 		if(pixel.a)
 		{
-			int index = ((ppu->active_y * VISIBLE_DOTS) + ppu->active_x) * 3;
-			ppu->pixel_buf[index] = pixel.r;
-			ppu->pixel_buf[index + 1] = pixel.g;
-			ppu->pixel_buf[index + 2] = pixel.b;
+			// int index = ((ppu->active_y * VISIBLE_DOTS) + ppu->active_x) * 3;
 		}
 	}
 }
@@ -210,12 +212,12 @@ int enter_vblank(struct data_bus *data_bus)
 {
 	struct PPU *ppu = data_bus->B_bus.ppu->ppu;
 
-	if(ppu->x == 0 && ppu->y == 0xF0 && ppu->overscan)
+	if(ppu->x == 0 && ppu->y == 0xF0 * 2 && ppu->overscan)
 	{
 		return 1;
 	}
 
-	if(ppu->x == 0 && ppu->y == 0xE1 && !ppu->overscan)
+	if(ppu->x == 0 && ppu->y == 0xE1 * 2 && !ppu->overscan)
 	{
 		return 1;
 	}
@@ -275,16 +277,11 @@ void move_beam(struct data_bus *data_bus)
 {
 	struct PPU *ppu = data_bus->B_bus.ppu->ppu;
 
-	ppu->x++;
-
-	if(ppu->active_scan)
-	{
-		ppu->active_x++;
-	}
-
 	if(enter_vblank(data_bus))
 	{
 		signal_vblank(data_bus);
+
+		ppu->frame_finished = 1;
 	}
 
 	if(enter_hblank(data_bus))
@@ -293,7 +290,6 @@ void move_beam(struct data_bus *data_bus)
 		allow_HDMA(data_bus);
 
 		ppu->queued_cycles += 68;
-		ppu->active_scan = 0;
 	}
 
 	if(exit_vblank(data_bus))
@@ -313,9 +309,8 @@ void move_beam(struct data_bus *data_bus)
 		clear_hblank(data_bus);
 		disallow_HDMA(data_bus);
 
-		ppu->active_scan = 1;
 		ppu->active_x = 0;
-		ppu->active_y++;
+		ppu->active_y += 1;
 	}
 
 	if(exit_line(data_bus))
@@ -326,14 +321,33 @@ void move_beam(struct data_bus *data_bus)
 		}
 		else 
 		{
-			ppu->y++;
+			ppu->y += 1;
 		}
 
 		ppu->x = 0;
 	}
+	else 
+	{	
+		ppu->x += 1;
+
+		if(ppu->active_scan)
+		{
+			ppu->active_x += 1;
+		}
+	}
+
+	ppu->active_scan = 0;
+
+	if(HIDE_DOTS <= ppu->x && ppu->x < VISIBLE_DOTS + HIDE_DOTS)
+	{
+		if(HIDE_LINES <= ppu->y && ppu->y < VISIBLE_LINES + HIDE_LINES)
+		{
+			ppu->active_scan = 1;
+		}
+	}
 }
 
-void ppu_dot(struct data_bus *data_bus)
+void ppu_dot(struct data_bus *data_bus, SDL_Surface *frame_buffer)
 {
 	struct PPU *ppu = data_bus->B_bus.ppu->ppu;
 
@@ -351,9 +365,9 @@ void ppu_dot(struct data_bus *data_bus)
 		set_refresh(data_bus);
 	}
 
-	if(ppu->BG_mode == 0)
+	if(ppu->BG_mode == 0 && ppu->active_scan)
 	{
-		M0_dot(data_bus);
+		M0_dot(data_bus, frame_buffer);
 	}
 
 

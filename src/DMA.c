@@ -45,6 +45,8 @@ void init_DMA(struct data_bus *data_bus)
 		mem_write(data_bus, swap_channels(UNUSED1, i), 0xFF);
 		mem_write(data_bus, swap_channels(UNUSED2, i), 0xFF);
 	}
+
+	data_bus->B_bus.dma->alignment_counter = 0;
 }
 
 uint32_t get_HDMA_table_index(struct DMA *dma, int channel)

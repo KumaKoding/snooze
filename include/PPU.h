@@ -3,6 +3,7 @@
 
 #include "memory.h"
 #include <stdint.h>
+#include <SDL3/SDL.h>
 
 #define DOTS 640
 #define LINES 525
@@ -75,8 +76,6 @@ typedef struct
 
 struct PPU
 {
-	uint8_t *pixel_buf;
-
 	int F_blank;
 	uint8_t brightness;
 	enum sprite_sizes obj_sizes[2];
@@ -229,10 +228,11 @@ struct PPU
 	int active_scan;
 	int active_x, active_y;
 	int queued_cycles;
+	int frame_finished;
 };
 
 void init_s_ppu(struct S_PPU *s_ppu);
-void ppu_dot(struct data_bus *data_bus);
+void ppu_dot(struct data_bus *data_bus, SDL_Surface *frame_buffer);
 
 void latch_HVCT(struct data_bus *data_bus);
 void clear_HVCT(struct data_bus *data_bus);

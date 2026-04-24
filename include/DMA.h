@@ -65,6 +65,8 @@ struct DMA
 	int queued_cycles;
 	int elapsed_cycles;
 	int dma_active;
+
+	int alignment_counter;
 };
 
 
