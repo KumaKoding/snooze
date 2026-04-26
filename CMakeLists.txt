@@ -3,7 +3,7 @@ project(snooze
 		VERSION 0.0.1
 		LANGUAGES C)
 
-add_compile_options(-fsanitize=undefined -Wall -Werror -Iinclude)
+add_compile_options(-fsanitize=undefined -O3 -Wall -Werror -Iinclude)
 add_link_options(-fsanitize=undefined)
 
 find_package(SDL3 REQUIRED)

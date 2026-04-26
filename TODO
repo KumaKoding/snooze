@@ -1,3 +1,5 @@
 - initial states for cpu and ppu
 - DMA
 - FBlank
+- OAM is wrong
+- Hi-res/interlacing/ppu.x/y intervals

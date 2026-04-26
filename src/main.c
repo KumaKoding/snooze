@@ -196,7 +196,6 @@ int init_snooze(struct Screen *screen)
 int main(int argc, char *argv[])
 {
 	struct data_bus data_bus;
-
 	struct Memory memory;
 	struct Ricoh_5A22 cpu;
 	struct S_PPU s_ppu;

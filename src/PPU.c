@@ -55,6 +55,8 @@ void get_tile(struct tilemap *tilemap, struct data_bus *data_bus, uint16_t VRAM_
 	tilemap->palette = (tilemap_data & 0b0001110000000000) >> 10;
 	tilemap->tile_addr = (0x0000 | VRAM_page_offset) << 12;
 	tilemap->tile_addr = tilemap->tile_addr | (tilemap_data & 0b0000001111111111);
+
+	// printf("%04x: %d, %04x\n", VRAM_addr, tilemap->palette, tilemap->tile_addr);
 }
 
 void rgba_from_CGRAM(Color_t *color, uint16_t cg)
@@ -84,10 +86,11 @@ void M0_dot(struct data_bus *data_bus, SDL_Surface *frame_buffer)
 	// int horizontal_tiles = ppu->BGn_tilemap_info.horizontal_tilemaps[layer];
 	int vertical_tiles = ppu->BGn_tilemap_info.vertical_tilemaps[layer];
 
-	uint16_t VRAM_addr = ppu->BGn_tilemap_info.tilemap_vram_addr[layer] << 10;
+	uint16_t VRAM_addr = (ppu->BGn_tilemap_info.tilemap_vram_addr[layer] << 10) & (~0x8000);
+	printf("%02x -> %04x -> ", ppu->BGn_tilemap_info.tilemap_vram_addr[layer], VRAM_addr);
 
-	uint16_t screen_x = ppu->active_x + ppu->BG_scroll_offset.BGn_horizontal_offset[layer];
-	uint16_t screen_y = ppu->active_y + ppu->BG_scroll_offset.BGn_vertical_offset[layer];
+	uint16_t screen_x = (ppu->active_x / 2) + ppu->BG_scroll_offset.BGn_horizontal_offset[layer];
+	uint16_t screen_y = (ppu->active_y / 2) + ppu->BG_scroll_offset.BGn_vertical_offset[layer];
 
 	if(ppu->active_x == 0)
 	{
@@ -96,11 +99,12 @@ void M0_dot(struct data_bus *data_bus, SDL_Surface *frame_buffer)
 
 	if(ppu->BGn_character_size[layer] == CH_SIZE_8x8)
 	{
-		int scaled_x = screen_x / 16; // because we're counting double width for interlacing/high res
-		int scaled_y = screen_y / 16;
+		int scaled_x = screen_x / 8; // because we're counting double width for interlacing/high res
+		int scaled_y = screen_y / 8;
 
 		if(scaled_x > TILEMAP_BASE_SIDE)
 		{
+			printf("alfkjsdlfa\n");
 			scaled_x = (scaled_x - TILEMAP_BASE_SIDE);
 			scaled_x += (TILEMAP_BASE_SIDE) * (vertical_tiles * TILEMAP_BASE_SIDE);
 			// printf("%d %d\n", scaled_x, scaled_y);
@@ -113,12 +117,16 @@ void M0_dot(struct data_bus *data_bus, SDL_Surface *frame_buffer)
 		struct tilemap tile;
 		get_tile(&tile, data_bus, VRAM_addr, ppu->BGn_chr_tiles_offset[layer]);
 
+
+		printf("%04x -> %04x -> ", VRAM_addr, tile.tile_addr);
+
 		int tile_x = screen_x % 8;
 		int tile_y = screen_y % 8;
 
-		uint16_t bitplane = read_VRAM(data_bus, tile.tile_addr + tile_y);
-		int hi_bit = check_bit16(bitplane, 0x0100 << tile_x);
-		int lo_bit = check_bit16(bitplane, 0x0001 << tile_x);
+		uint16_t bitplane = read_VRAM(data_bus, (tile.tile_addr * 8) + tile_y);
+		printf("%04x\n", bitplane);
+		int hi_bit = check_bit16(bitplane, 0x8000 >> tile_x);
+		int lo_bit = check_bit16(bitplane, 0x0080 >> tile_x);
 		int index = ((0 | hi_bit) << 1) | lo_bit;
 
 		uint16_t CGRAM_addr = (tile.palette * 4) + index;
@@ -127,12 +135,7 @@ void M0_dot(struct data_bus *data_bus, SDL_Surface *frame_buffer)
 		Color_t pixel;
 		rgba_from_CGRAM(&pixel, read_CGRAM(data_bus, CGRAM_addr));
 
-		if(pixel.a)
-		{
-			// int index = ((ppu->active_y * VISIBLE_DOTS) + ppu->active_x) * 3;
-			// printf("%d:%d - %d %d %d\n", ppu->active_x, ppu->active_y, pixel.r, pixel.g, pixel.b);
-			SDL_WriteSurfacePixel(frame_buffer, ppu->x, ppu->y, pixel.r, pixel.g, pixel.b, pixel.a);
-		}
+		SDL_WriteSurfacePixel(frame_buffer, ppu->x, ppu->y, pixel.r, pixel.g, pixel.b, 255);
 	}
 	else if(ppu->BGn_character_size[layer] == CH_SIZE_16x16)
 	{
@@ -310,7 +313,7 @@ void move_beam(struct data_bus *data_bus)
 		disallow_HDMA(data_bus);
 
 		ppu->active_x = 0;
-		ppu->active_y += 1;
+		ppu->active_y += 2;
 	}
 
 	if(exit_line(data_bus))
@@ -321,18 +324,18 @@ void move_beam(struct data_bus *data_bus)
 		}
 		else 
 		{
-			ppu->y += 1;
+			ppu->y += 2;
 		}
 
 		ppu->x = 0;
 	}
 	else 
 	{	
-		ppu->x += 1;
+		ppu->x += 2;
 
 		if(ppu->active_scan)
 		{
-			ppu->active_x += 1;
+			ppu->active_x += 2;
 		}
 	}
 
@@ -357,6 +360,7 @@ void ppu_dot(struct data_bus *data_bus, SDL_Surface *frame_buffer)
 	}
 	else 
 	{
+		// takes 4 times as long because there are double x / y
 		short_dot(data_bus);
 	}
 
@@ -365,7 +369,7 @@ void ppu_dot(struct data_bus *data_bus, SDL_Surface *frame_buffer)
 		set_refresh(data_bus);
 	}
 
-	if(ppu->BG_mode == 0 && ppu->active_scan)
+	if(ppu->BG_mode == 0 && ppu->active_scan && ppu->active_y % 2 == 0 && ppu->active_x % 2 ==0)
 	{
 		M0_dot(data_bus, frame_buffer);
 	}

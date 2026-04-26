@@ -222,6 +222,10 @@ void transfer_byte(struct data_bus *data_bus, int channel, int b_offset)
 	switch (dma->direction[channel]) 
 	{
 		case A_to_B:
+			// printf("%06x (%02x) -> %04x\n",
+					// dma->DMA_source_addr[channel],
+					// mem_read(data_bus, dma->DMA_source_addr[channel]), 
+					// 0x2100 | dma->DMA_B_addr[channel] + b_offset);
 			mem_write(data_bus, (0x2100 | dma->DMA_B_addr[channel]) + b_offset, mem_read(data_bus, dma->DMA_source_addr[channel]));
 
 			break;
@@ -260,7 +264,7 @@ void MDMA_step(struct data_bus *data_bus, int channel)
 
 	if(dma->MDMA_channel_over)
 	{
-		printf("NEW DMA\n");
+		printf("NEW DMA, %06x\n", dma->DMA_source_addr[channel]);
 		dma->queued_cycles += 8;
 	}
 

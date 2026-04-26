@@ -180,14 +180,14 @@ void write_ppu_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_
 		ppu->BGn_tilemap_info.horizontal_tilemaps[0] = check_bit8(write_value, 0b00000001) + 1;
 	}
 
-	if(addr == BG1SC)
+	if(addr == BG2SC)
 	{
 		ppu->BGn_tilemap_info.tilemap_vram_addr[1] = write_value >> 2;
 		ppu->BGn_tilemap_info.vertical_tilemaps[1] = check_bit8(write_value, 0b00000010) + 1;
 		ppu->BGn_tilemap_info.horizontal_tilemaps[1] = check_bit8(write_value, 0b00000001) + 1;
 	}
 
-	if(addr == BG1SC)
+	if(addr == BG3SC)
 	{
 		ppu->BGn_tilemap_info.tilemap_vram_addr[2] = write_value >> 2;
 		ppu->BGn_tilemap_info.vertical_tilemaps[2] = check_bit8(write_value, 0b00000010) + 1;
@@ -404,14 +404,16 @@ void write_ppu_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_
 	if(addr == VMADDL)
 	{
 		// cannot read during blanks
-		ppu->VRAM_addr = LE_COMBINE_2BYTE(read_register_raw(data_bus, VMADDL), read_register_raw(data_bus, VMADDH)) * 2;
+		ppu->VRAM_addr = LE_COMBINE_2BYTE(write_value, LE_HBYTE16(ppu->VRAM_addr));
+		printf("\n\nNEW ADDR %04x\n", ppu->VRAM_addr);
 		ppu->VRAM_latch = read_VRAM(data_bus, ppu->VRAM_addr);
 	}
 
 	if(addr == VMADDH)
 	{
 		// cannot read during blanks
-		ppu->VRAM_addr = LE_COMBINE_2BYTE(read_register_raw(data_bus, VMADDL), read_register_raw(data_bus, VMADDH));
+		ppu->VRAM_addr = LE_COMBINE_2BYTE(LE_LBYTE16(ppu->VRAM_addr), write_value);
+		// printf("%04x\n", ppu->VRAM_addr);
 		ppu->VRAM_latch = read_VRAM(data_bus, ppu->VRAM_addr);
 	}
 
@@ -419,6 +421,16 @@ void write_ppu_register(struct data_bus *data_bus, uint32_t addr, uint8_t write_
 	{
 		write_VRAM_low(data_bus, ppu->VRAM_addr, write_value);
 
+		printf("%04x - %d%d%d%d%d%d%d%d\n",
+				ppu->VRAM_addr,
+				check_bit8(write_value, 0x80),
+				check_bit8(write_value, 0x40),
+				check_bit8(write_value, 0x20),
+				check_bit8(write_value, 0x10),
+				check_bit8(write_value, 0x08),
+				check_bit8(write_value, 0x04),
+				check_bit8(write_value, 0x02),
+				check_bit8(write_value, 0x01));
 		if(ppu->VRAM_increment_mode == 0)
 		{
 			ppu->VRAM_addr++;
